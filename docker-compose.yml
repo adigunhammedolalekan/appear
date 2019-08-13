@@ -1,0 +1,37 @@
+version: "3.1"
+
+services:
+  docker-registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5000:5000
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+    volumes:
+      - /opt/registry/data:/var/lib/registry
+      - /opt/registry/auth:/auth
+  paas:
+    build: .
+    volumes:
+      - /var/repos:/var/repos
+      - /var/build:/var/build # build dirs
+      - /var/repos/hooks_executor.go:/var/repos/hooks_executor.go
+    ports:
+      - "9798:9798"
+      - "9007:9007"
+  database:
+    image: postgres:latest
+    container_name: database
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: man
+      POSTGRES_DB: paas
+      PGDATA: /opt/database
+    volumes:
+      - opt/database:/opt/database
+    ports:
+      - "5432:5432"

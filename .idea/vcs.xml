@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$/clone/repo" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/repo1" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/repo11" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/repo111" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/test1" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/testRepo" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/clone/testRepo1" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/test11" vcs="Git" />
+  </component>
+</project>
