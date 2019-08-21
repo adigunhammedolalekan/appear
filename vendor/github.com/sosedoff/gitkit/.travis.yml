@@ -1,0 +1,11 @@
+language: go
+
+go:
+  - "1.10"
+  - "1.11"
+
+before_script:
+  - make setup
+
+script:
+  - make test

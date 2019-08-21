@@ -95,7 +95,7 @@ func (s *TcpServer) Write(p *Payload) error {
 	if err != nil {
 		return err
 	}
-	log.Println("written ", n, " to client ", p.Key)
+	log.Println("written: ", n, " to client: ", p.Key)
 	return nil
 }
 

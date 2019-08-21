@@ -2,7 +2,7 @@ package repos
 
 import (
 	"errors"
-	"fast.co/fastaf-go/src/api/fn"
+	"github.com/adigunhammedolalekan/paas/fn"
 	"github.com/adigunhammedolalekan/paas/types"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
@@ -111,7 +111,7 @@ func (repo *userRepository) GenerateToken(user *types.User) string {
 	if err != nil {
 		return ""
 	}
-	return string(tkString)
+	return tkString
 }
 
 func (repo *userRepository) VerifyToken(inputToken string) (*types.User, error) {
