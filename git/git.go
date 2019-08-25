@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 )
 
-const gitStoragePath = "/var/repos"
-const postReceiveHookPath = "/var/repos/hooks_executor"
+const gitStoragePath = "/Users/user/mnt/repos"
+const postReceiveHookPath = "./hooks_executor.go"
 
 type GitService struct {
 	Server *gitkit.Server
@@ -30,7 +30,7 @@ func NewService(db *gorm.DB) (*GitService, error) {
 	})
 
 	service.AuthFunc = func(credential gitkit.Credential, request *gitkit.Request) (b bool, e error) {
-		log.Println(request.RepoPath, request.RepoName)
+		// log.Println(request.RepoPath, request.RepoName)
 		return verifyRepositoryUser(db, credential.Username, credential.Password)
 	}
 
@@ -53,18 +53,15 @@ func (s *GitService) CreateNewRepository(appName, repoName string) error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
-
 	if err := s.initPostReceiveHook(fullpath); err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func (s *GitService) initPostReceiveHook(fullpath string) error {
 	hooksPath := filepath.Join(fullpath, "hooks")
 	hookFiles, err := ioutil.ReadDir(hooksPath)
-
 	// clean hooks dir
 	if err == nil {
 		for _, fi := range hookFiles {
@@ -73,7 +70,6 @@ func (s *GitService) initPostReceiveHook(fullpath string) error {
 			}
 		}
 	}
-
 	postReceiveHookPath := filepath.Join(hooksPath, "post-receive")
 	if err := ioutil.WriteFile(postReceiveHookPath, []byte(s.postReceiveHookContent()), 0755); err != nil {
 		return err
@@ -81,7 +77,6 @@ func (s *GitService) initPostReceiveHook(fullpath string) error {
 	if err := s.writeHookExecutor(hooksPath); err != nil {
 		return err
 	}
-
 	log.Println("written hook file!")
 	return nil
 }
@@ -92,7 +87,6 @@ func (s *GitService) writeHookExecutor(hookPath string) error {
 	if err != nil {
 		return err
 	}
-
 	if err := ioutil.WriteFile(fullpath, executorContent, 0755); err != nil {
 		return err
 	}
@@ -104,13 +98,24 @@ func (s *GitService) postReceiveHookContent() string {
 	return fmt.Sprintf("#!/bin/sh\necho %q\ndir=`pwd`\necho $dir\ngo run hooks/main.go", "executing post receive!")
 }
 
-func (s *GitService) CloneRepository(clonePath, gitUrl string) (*object.Commit, error) {
-	repo, err := git.PlainClone(clonePath, true, &git.CloneOptions{
-		URL:  gitUrl,
-		Auth: &http.BasicAuth{},
-	})
+func (s *GitService) CloneRepository(username, clonePath, gitUrl string) (*object.Commit, error) {
+	userDir := filepath.Join(gitStoragePath, username)
+	if err := os.MkdirAll(userDir, os.ModePerm); err != nil {
+		log.Println("failed to create user repos dir! ", err)
+	}
 
+	repo, err := git.PlainClone(clonePath, false, &git.CloneOptions{
+		URL:  gitUrl,
+		Auth: &http.BasicAuth{
+			Username: os.Getenv("ADMIN_REPO_KEY"), Password: os.Getenv("ADMIN_REPO_KEY"),
+		},
+	})
+	if err != nil && err != git.ErrRepositoryAlreadyExists {
+		return nil, err
+	}
+	repo, err = git.PlainOpen(clonePath)
 	if err != nil {
+		log.Println("failed to open repo ", clonePath, err)
 		return nil, err
 	}
 
@@ -122,6 +127,10 @@ func (s *GitService) CloneRepository(clonePath, gitUrl string) (*object.Commit, 
 }
 
 func verifyRepositoryUser(db *gorm.DB, username, password string) (bool, error) {
+	admin := os.Getenv("ADMIN_REPO_KEY")
+	if username == admin {
+		return true, nil
+	}
 	u := &types.User{}
 	err := db.Table("users").Where("email = ?", username).First(u).Error
 	if err != nil {

@@ -15,7 +15,10 @@ import (
 	"time"
 )
 
-func __main() {
+const tcpServerAddr = "localhost:9010"
+const appBuildUrl = "http://localhost:9060/api/build"
+
+func main() {
 	out := os.Stdout
 	info, err := ReadHookInput(os.Stdin)
 	if err != nil {
@@ -24,25 +27,27 @@ func __main() {
 	}
 
 	info.Key = "key" + randString()[:5]
-	u := "http://paas:8007/api/build"
 	j, _ := json.Marshal(info)
 	out.Write([]byte("Building app..."))
-	req, err := http.NewRequest("POST", u, bytes.NewReader(j))
+	req, err := http.NewRequest("POST", appBuildUrl, bytes.NewReader(j))
 	if err != nil {
 		out.Write([]byte("failed to build request"))
 		return
 	}
 
-	t := newTcpClient(info.Key)
-	t.write(info.Key)
+	t, err := newTcpClient()
+	if err != nil {
+		out.Write([]byte("failed to build app. Internal TCP server error " + err.Error()))
+		return
+	}
+
+	if err := t.write(strings.TrimSpace(info.Key)); err != nil {
+		out.Write([]byte("failed to register client " + err.Error()))
+	}
+
 	go func() {
 		t.start(out)
 	}()
-
-	for _, pair := range os.Environ() {
-		out.Write([]byte(pair))
-		out.Write([]byte("\n"))
-	}
 
 	c := &http.Client{}
 	resp, err := c.Do(req)
@@ -50,8 +55,21 @@ func __main() {
 		out.Write([]byte("error response from API " + err.Error()))
 		return
 	}
-
-	out.Write([]byte("Built app " + resp.Status))
+	type R struct {
+		Error bool `json:"error"`
+		Message string `json:"message"`
+	}
+	r := &R{}
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(r); err != nil {
+		out.Write([]byte("failed to decode response " + err.Error()))
+		return
+	}
+	message := ""
+	if r.Error {
+		message = "failed to build app: " + r.Message
+	}else { message = "app built: " + message }
+	out.Write([]byte(message))
 }
 
 type HookInfo struct {
@@ -97,12 +115,12 @@ type TcpClient struct {
 	conn net.Conn
 }
 
-func newTcpClient(key string) *TcpClient {
-	conn, err := net.Dial("tcp", "paas:9010")
+func newTcpClient() (*TcpClient, error) {
+	conn, err := net.Dial("tcp", tcpServerAddr)
 	if err != nil {
-
+		return nil, err
 	}
-	return &TcpClient{conn: conn}
+	return &TcpClient{conn: conn}, nil
 }
 
 func (t *TcpClient) start(fi *os.File) {
@@ -112,16 +130,17 @@ func (t *TcpClient) start(fi *os.File) {
 		if err != nil && err != io.EOF {
 			break
 		}
-
 		fi.Write(buf[:])
 	}
 }
 
-func (t *TcpClient) write(key string) {
-	m := "connect|" + key
+func (t *TcpClient) write(key string) error {
+	m := fmt.Sprintf("connect|%s\n", key)
 	_, err := t.conn.Write([]byte(m))
 	if err != nil {
+		return err
 	}
+	return nil
 }
 
 func randString() string {

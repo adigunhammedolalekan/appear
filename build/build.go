@@ -70,7 +70,7 @@ func (g GolangBuild) EnvVars() []EnvVar {
 }
 
 func (g GolangBuild) Port() int64 {
-	return 9888
+	return 80
 }
 
 func (g GolangBuild) ExecCommand() string {
@@ -124,7 +124,7 @@ func (g NodeJsBuild) EnvVars() []EnvVar {
 }
 
 func (g NodeJsBuild) Port() int64 {
-	return 9881
+	return 80
 }
 
 func (g NodeJsBuild) ExecCommand() string {

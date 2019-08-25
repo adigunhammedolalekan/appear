@@ -21,6 +21,14 @@ type ConnMessage struct {
 	Key    string
 }
 
+func (c *ConnMessage) KeyString() string {
+	return strings.TrimSpace(c.Key)
+}
+
+func (c *ConnMessage) ActionString() string {
+	return strings.TrimSpace(c.Action)
+}
+
 type Payload struct {
 	Key     string
 	Message string
@@ -49,7 +57,6 @@ func (s *TcpServer) Run() error {
 			log.Println("failed to accept remote conn: ", err)
 			continue
 		}
-
 		go s.handleConn(conn)
 	}
 }
@@ -66,7 +73,7 @@ func (s *TcpServer) handleConn(conn net.Conn) {
 
 		message := s.parseMessage(strings.TrimSpace(m))
 		if message != nil {
-			if message.Action == "connect" {
+			if message.ActionString() == "connect" {
 				s.register(message, conn)
 				break
 			}
@@ -79,19 +86,19 @@ func (s *TcpServer) register(m *ConnMessage, conn net.Conn) {
 	defer s.mtx.Unlock()
 
 	log.Println("[TCP]: registering connection ", m.Key)
-	s.conns[m.Key] = conn
+	s.conns[m.KeyString()] = conn
 }
 
 func (s *TcpServer) Write(p *Payload) error {
 	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
 	conn, ok := s.conns[p.KeyString()]
+	s.mtx.Unlock()
+
 	if !ok {
 		return fmt.Errorf("net.Conn not found for key %s", p.KeyString())
 	}
 
-	n, err := conn.Write([]byte(p.Message))
+	n, err := conn.Write([]byte(fmt.Sprintf("%s\n", p.Message)))
 	if err != nil {
 		return err
 	}

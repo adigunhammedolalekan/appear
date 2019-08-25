@@ -1,6 +1,7 @@
 package types
 
 import (
+	"fmt"
 	"github.com/adigunhammedolalekan/paas/server"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
@@ -20,6 +21,8 @@ type App struct {
 	UserId     uint        `json:"user_id"`
 	Name       string      `json:"app_name"`
 	RepoUrl    string      `json:"repo_url"`
+	AppUrl string `json:"app_url"`
+	ImageName string `json:"image_name"`
 	Credential *Credential `json:"credential" gorm:"-"`
 	User       *User       `json:"user" gorm:"-"`
 }
@@ -54,4 +57,8 @@ func (u *User) UniqueName() string {
 		return u.Email
 	}
 	return parts[0]
+}
+
+func (a *App) DeploymentName() string {
+	return fmt.Sprintf("%s-%s", a.Name, "deployment")
 }

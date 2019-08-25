@@ -3,6 +3,7 @@ package repos
 import (
 	"fmt"
 	"github.com/adigunhammedolalekan/paas/git"
+	"github.com/adigunhammedolalekan/paas/k8s"
 	"github.com/adigunhammedolalekan/paas/types"
 	"github.com/goombaio/namegenerator"
 	"github.com/jinzhu/gorm"
@@ -16,23 +17,27 @@ type AppsRepository interface {
 	CreateApp(opt *types.CreateAppOpts) (*types.App, error)
 	AppExists(name string, user uint) bool
 	ListApps(userId uint) ([]*types.App, error)
-	CloneRepository(path, httpUrl string) (*object.Commit, error)
+	CloneRepository(username, path, httpUrl string) (*object.Commit, error)
 	LogDeploymentEvent(user string, appId uint) error
 	GetAppByRepositoryUrl(repoUrl string) (*types.App, error)
+	UpdateDeployment(app *types.App) error
 }
 
 type appsRepository struct {
 	db         *gorm.DB
 	userRepo   UserRepository
 	gitService *git.GitService
+	k8s k8s.K8sService
 }
 
 func NewAppRepository(
 	db *gorm.DB,
-	service *git.GitService) AppsRepository {
+	service *git.GitService,
+	k8s k8s.K8sService) AppsRepository {
 	return &appsRepository{
 		db:         db,
 		gitService: service,
+		k8s: k8s,
 		userRepo:   NewUserRepository(db),
 	}
 }
@@ -61,7 +66,7 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 		return nil, err
 	}
 
-	repoUrl := fmt.Sprintf("http://%s/%s/%s.git", os.Getenv("REPO_SERVER_BASE_URL"), user.UniqueName(), opt.Name)
+	repoUrl := fmt.Sprintf("%s/%s/%s.git", os.Getenv("REPO_SERVER_BASE_URL"), user.UniqueName(), opt.Name)
 	app := types.NewApp(opt.Name, repoUrl, user.ID)
 	if err := tx.Create(app).Error; err != nil {
 		log.Println("[CreateApp]: failed to create app ", err)
@@ -76,10 +81,23 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 		return nil, err
 	}
 
-	if err := tx.Commit().Error; err != nil {
+	if err := repo.k8s.NginxDeployment(app); err != nil {
+		tx.Rollback()
+		log.Println("[CreateApp] failed to create default nginx deployment ", err)
 		return nil, err
 	}
 
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+	svc := repo.k8s.GetService(opt.Name)
+	if svc != nil {
+		ports := svc.Spec.Ports
+		if len(ports) > 0 {
+			port := ports[0].NodePort
+			app.AppUrl = fmt.Sprintf("http://localhost:%d", port)
+		}
+	}
 	return app, nil
 }
 
@@ -105,8 +123,8 @@ func (repo *appsRepository) AppExists(name string, userId uint) bool {
 	return true
 }
 
-func (repo *appsRepository) CloneRepository(path, httpUrl string) (*object.Commit, error) {
-	return repo.gitService.CloneRepository(path, httpUrl)
+func (repo *appsRepository) CloneRepository(username, path, httpUrl string) (*object.Commit, error) {
+	return repo.gitService.CloneRepository(username, path, httpUrl)
 }
 
 func (repo *appsRepository) LogDeploymentEvent(user string, appId uint) error {
@@ -120,6 +138,10 @@ func (repo *appsRepository) GetAppByRepositoryUrl(repoUrl string) (*types.App, e
 		return nil, err
 	}
 	return a, nil
+}
+
+func (repo *appsRepository) UpdateDeployment(app *types.App) error {
+	return repo.k8s.UpdateDeployment(app)
 }
 
 func (repo *appsRepository) randomAppName() string {

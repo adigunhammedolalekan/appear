@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -94,28 +95,25 @@ func (p *DockerService) tagImage(name string) (string, error) {
 func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildResult, error) {
 	err := p.buildDockerfile(path, build)
 	if err != nil {
+		log.Println("buildDockerfile ", err)
 		return nil, err
 	}
 
-	wd, err := os.Getwd()
+	buildCtx, err := p.createBuildContext(path)
 	if err != nil {
+		log.Println("createBuildContext ", err)
 		return nil, err
 	}
 
-	buildCtx, err := p.createBuildContext(path, wd)
-	if err != nil {
-		return nil, err
-	}
-
-	tag := fmt.Sprintf("%s%s%s", "docker-registry:5000/", build.Name(), p.md5()[:6])
+	tag := fmt.Sprintf("%s%s:%s", "dockadigun/", build.Name(), p.md5()[:6])
 	ctx := context.Background()
-	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions{
+	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions {
 		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{tag}, Remove: true, NoCache: true,
 	})
 	if err != nil {
+		log.Println("ImageBuild ", err)
 		return nil, err
 	}
-
 	res := &DockerBuildResult{
 		Log: make(chan string, 1),
 	}
@@ -131,14 +129,47 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildR
 				log.Println("error reading response ", err)
 				continue
 			}
-			res.Log <- string(buf[:])
+			s := string(buf[:])
+			log.Println(s)
+			res.Log <- s
+		}
+		for {
+			pushReader, err := p.client.ImagePush(ctx, tag, types.ImagePushOptions{})
+			if err != nil {
+				close(res.Log)
+				log.Println("failed to push ", err)
+				break
+			}
+			buf := make([]byte, 512)
+			_, err = pushReader.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					close(res.Log)
+					break
+				}
+				log.Println("error reading response ", err)
+				continue
+			}
+			s := string(buf[:])
+			log.Println(s)
+			res.Log <- s
 		}
 	}()
-	return &DockerBuildResult{Tag: tag, PullPath: tag}, nil
+
+	res.PullPath = tag
+	res.Tag = tag
+	return res, nil
 }
 
 func (p *DockerService) buildDockerfile(path string, build Build) error {
-
+	// check for Dockerfile presence and just return
+	// to caller if we already have a Dockerfile
+	dockerfile := filepath.Join(path, "Dockerfile")
+	log.Println("Dockerfile", dockerfile)
+	if _, err := os.Stat(dockerfile); err == nil {
+		// we have a Dockerfile
+		return nil
+	}
 	if err := p.write(fmt.Sprintf("FROM %s\n", build.BaseImage())); err != nil {
 		return err
 	}
@@ -201,8 +232,8 @@ func (p *DockerService) buildDockerfile(path string, build Build) error {
 	return nil
 }
 
-func (p *DockerService) createBuildContext(dockerFile, path string) (io.Reader, error) {
-	return archive.Tar(path, archive.Uncompressed)
+func (p *DockerService) createBuildContext(path string) (io.Reader, error) {
+	return archive.Tar(path + "/", archive.Uncompressed)
 }
 
 func (p *DockerService) contains(name string) bool {

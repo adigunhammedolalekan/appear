@@ -1,0 +1,8 @@
+{
+  "language" : "Go",
+  "dep" : "dep",
+  "envs" : [
+    {"key" : "value"},
+    {"key" : "value"}
+  ]
+}
