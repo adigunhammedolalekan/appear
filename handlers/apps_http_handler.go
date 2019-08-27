@@ -86,7 +86,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		return
 	}
 
-	config, err := handler.readConfigFromRepo(clonePath)
+	config, err := handler.readConfigFromRepo(app.Name, clonePath)
 	if err != nil {
 		tcpPayload.Message = "failed to read PaaS config. " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
@@ -114,6 +114,18 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		tcpPayload.Message = s.Stream
 		handler.writeTcpMessage(tcpPayload)
 	}
+	handler.writeTcpMessage(tcpPayload)
+	pushChan, err := handler.dockerService.PushImage(result.PullPath)
+	if err != nil {
+		tcpPayload.Message = "failed to push image " + err.Error()
+		handler.writeTcpMessage(tcpPayload)
+		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
+		return
+	}
+	for r := range pushChan {
+		tcpPayload.Message = r
+		handler.writeTcpMessage(tcpPayload)
+	}
 
 	app.ImageName = result.PullPath
 	if err := handler.appRepo.UpdateDeployment(app); err != nil {
@@ -130,6 +142,15 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, nil)
+}
+
+func (handler *AppsHandler) LogsHandler(ctx *gin.Context) {
+	s, err := handler.appRepo.Logs(ctx.Query("name"))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, &Response{Error: true, Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, &Response{Error: false, Message: s})
 }
 
 func (handler *AppsHandler) resolveRepoUrl(s string) string {
@@ -155,15 +176,16 @@ func (handler *AppsHandler) writeTcpMessage(p *server.Payload) {
 	}
 }
 
-func (handler *AppsHandler) readConfigFromRepo(path string) (*build.Config, error) {
+func (handler *AppsHandler) readConfigFromRepo(appName, path string) (*build.Config, error) {
 	fullpath := filepath.Join(path, "paas_config.json")
 	data, err := ioutil.ReadFile(fullpath)
+	defaultConfig := &build.Config{Name: appName}
 	if err != nil {
-		return &build.Config{}, errors.New("paas_config.json is missing")
+		return defaultConfig, errors.New("paas_config.json is missing")
 	}
 	cfg := &build.Config{}
 	if err := json.Unmarshal(data, cfg); err != nil {
-		return &build.Config{}, errors.New("failed to read paas_config.json. malformed json data")
+		return defaultConfig, errors.New("failed to read paas_config.json. malformed json data")
 	}
 	return cfg, nil
 }

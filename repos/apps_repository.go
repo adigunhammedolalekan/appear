@@ -21,6 +21,7 @@ type AppsRepository interface {
 	LogDeploymentEvent(user string, appId uint) error
 	GetAppByRepositoryUrl(repoUrl string) (*types.App, error)
 	UpdateDeployment(app *types.App) error
+	Logs(name string) (string, error)
 }
 
 type appsRepository struct {
@@ -142,6 +143,10 @@ func (repo *appsRepository) GetAppByRepositoryUrl(repoUrl string) (*types.App, e
 
 func (repo *appsRepository) UpdateDeployment(app *types.App) error {
 	return repo.k8s.UpdateDeployment(app)
+}
+
+func (repo *appsRepository) Logs(name string) (string, error) {
+	return repo.k8s.Logs(name)
 }
 
 func (repo *appsRepository) randomAppName() string {

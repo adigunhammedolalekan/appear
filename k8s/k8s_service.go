@@ -10,16 +10,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/retry"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
-const nameSpace = "appear-namespace"
+const nameSpace = "default"
+const stablePort = 6001
 type K8sService interface {
 	NginxDeployment(app *types.App) error
 	GetService(name string) *v1.Service
 	UpdateDeployment(app *types.App) error
+	Logs(appName string) (string, error)
 }
 
 type PaasK8sService struct {
@@ -46,7 +50,7 @@ func NewK8sService() (K8sService, error) {
 func (service *PaasK8sService) NginxDeployment(app *types.App) error {
 	labels := map[string]string{"app" : app.Name}
 	if err := service.createK8sDeployment(app.DeploymentName(),
-		"nginx", labels, nil, 9009); err != nil {
+		"nginx", labels, nil, stablePort); err != nil {
 		log.Println("[k8s]: failed to create deployment for app ", app.Name, err)
 		return err
 	}
@@ -57,15 +61,17 @@ func (service *PaasK8sService) NginxDeployment(app *types.App) error {
 	return nil
 }
 
-func (service *PaasK8sService) createK8sService(name string, labels map[string]string) error {
+func (service *PaasK8sService) createK8sService(name string,
+	labels map[string]string) error {
 	svc := &v1.Service{}
 	svc.Name = name
 	svc.Labels = labels
+	svc.Namespace = nameSpace
 	svc.Spec = v1.ServiceSpec{
 		Type: v1.ServiceTypeNodePort,
 		Selector: labels,
 		Ports: []v1.ServicePort{
-			{Name: "http", Protocol: "TCP", Port: 80},
+			{Name: "http", Protocol: "TCP", Port: stablePort},
 		},
 	}
 	_, err := service.client.CoreV1().Services(nameSpace).Create(svc)
@@ -90,14 +96,15 @@ func (service *PaasK8sService) createK8sDeployment(name, imageName string,
 		e := v1.EnvVar{Name: v.Key, Value: v.Value}
 		envs = append(envs, e)
 	}
-
+	envs = append(envs, v1.EnvVar{Name: "PORT", Value: fmt.Sprintf("%d", servicePort)})
 	container := v1.Container{}
 	container.Name = fmt.Sprintf("%s-container", name)
 	container.Image = imageName
 	container.Ports = []v1.ContainerPort{
-		{Name: "http", ContainerPort: servicePort},
+		{Name: "http-port", ContainerPort: servicePort},
 	}
 	container.Env = envs
+	container.ImagePullPolicy = v1.PullAlways
 	podTemplate := v1.PodTemplateSpec{}
 	podTemplate.Labels = labels
 	podTemplate.Name = name
@@ -133,24 +140,22 @@ func (service *PaasK8sService) UpdateDeployment(app *types.App) error {
 	if svc == nil {
 		return errors.New("failed to find deployment service")
 	}
-	labels := map[string]string{"app" : app.Name}
-	nodePort := svc.Spec.Ports[0].NodePort
-	update := &appsv1.Deployment{}
-	update.Labels = labels
-	update.Spec.Template.Labels = labels
-	update.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: labels,
-	}
-	update.Name = app.DeploymentName()
-	container := v1.Container{}
-	container.Name = fmt.Sprintf("%s-container", app.Name)
-	container.Image = app.ImageName
-	container.Env = []v1.EnvVar{{Name: "PORT", Value: fmt.Sprintf("%d", nodePort)}}
-	update.Spec.Template.Spec.Containers = []v1.Container{
-		container,
-	}
-	_, err := service.client.AppsV1().Deployments(nameSpace).Update(update)
+
+	log.Println("Updating deployment for ", app.ImageName)
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		deployment, err := service.client.AppsV1().Deployments(nameSpace).Get(app.DeploymentName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		deployment.Spec.Template.Spec.Containers[0].Image = app.ImageName
+		deploymentClient := service.client.AppsV1().Deployments(nameSpace)
+		if _, err := deploymentClient.Update(deployment); err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
+		log.Println("failed to update deployment ", err)
 		return err
 	}
 	return nil
@@ -164,6 +169,35 @@ func (service *PaasK8sService) createNS() error {
 		log.Println("failed to create nameSpace ", err)
 	}
 	return nil
+}
+
+func (service *PaasK8sService) Logs(appName string) (string, error) {
+	pods, err := service.client.CoreV1().Pods(nameSpace).List(metav1.ListOptions{})
+	if err != nil {
+		log.Println("Pods log ", err)
+		return "", err
+	}
+	logsString := &strings.Builder{}
+	for _, v := range pods.Items {
+		if strings.HasPrefix(v.Name, appName) {
+			logs := service.client.CoreV1().Pods(nameSpace).GetLogs(v.Name, &v1.PodLogOptions{})
+			r, err := logs.Stream()
+			if err != nil {
+				log.Println("pod.Stream() error ", err)
+				return "", err
+			}
+			for {
+				b := make([]byte, 512)
+				_, err := r.Read(b)
+				if err != nil {
+					break
+				}
+				log.Println(string(b[:]))
+				logsString.WriteString(string(b[:]))
+			}
+		}
+	}
+	return logsString.String(), nil
 }
 
 func Int32(i int32) *int32 {

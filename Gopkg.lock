@@ -788,7 +788,7 @@
   version = "kubernetes-1.9.0"
 
 [[projects]]
-  digest = "1:adb971196634f635367182748b85c193c9cec736cb923214bbff7ab8b14f7e9d"
+  digest = "1:7099f1fd8b970e8a901f98e1d4d400cc4c5cd159b4c5c114f0835433b0a37dc7"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -837,6 +837,7 @@
     "util/flowcontrol",
     "util/homedir",
     "util/integer",
+    "util/retry",
   ]
   pruneopts = "UT"
   revision = "78700dec6369ba22221b72770783300f143df150"
@@ -874,6 +875,7 @@
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/util/retry",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

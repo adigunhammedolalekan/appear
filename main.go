@@ -74,6 +74,7 @@ func (s *Server) Run(addr string) error {
 	appGroup.Use(mw.JwtVerifyHandler)
 
 	apiGroup.POST("/build", appHandler.BuildAppHandler)
+	apiGroup.GET("/logs", appHandler.LogsHandler)
 	appGroup.POST("/new", appHandler.CreateAppHandler)
 	apiGroup.POST("/account/new", accountHandler.CreateNewUserHandler)
 	apiGroup.POST("/account/authenticate", accountHandler.AuthenticateAccount)

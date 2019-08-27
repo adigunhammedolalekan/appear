@@ -56,32 +56,33 @@ func (p *DockerService) PullImage(name string) error {
 	return nil
 }
 
-func (p *DockerService) PushImage(name string) error {
-	tag, err := p.tagImage(name)
-	if err != nil {
-		return err
-	}
-
+func (p *DockerService) PushImage(name string) (chan string, error) {
 	ctx := context.Background()
-	reader, err := p.client.ImagePush(ctx, tag, types.ImagePushOptions{RegistryAuth: "$$password$$"})
+	log.Println("Pushing to ", name)
+	reader, err := p.client.ImagePush(ctx, name, types.ImagePushOptions{RegistryAuth: "$$password$$"})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for {
-		buf := make([]byte, 512)
-		n, err := reader.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				break
+	r := make(chan string, 1)
+	go func() {
+		for {
+			buf := make([]byte, 512)
+			n, err := reader.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					close(r)
+					break
+				}
+				log.Println("failed to read push response ", err)
+				continue
 			}
-			log.Println("failed to read push response ", err)
-			continue
+			s := string(buf[:])
+			r <- s
+			log.Printf("Read: n => %d, Value = %v", n, string(buf[:]))
 		}
-
-		log.Printf("Read: n => %d, Value = %v", n, string(buf[:]))
-	}
-	return nil
+	}()
+	return r, nil
 }
 
 func (p *DockerService) tagImage(name string) (string, error) {
@@ -105,10 +106,11 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildR
 		return nil, err
 	}
 
-	tag := fmt.Sprintf("%s%s:%s", "dockadigun/", build.Name(), p.md5()[:6])
+	tag := p.md5()[:6]
+	pullPath := fmt.Sprintf("%s%s:%s", "localhost:5000/", build.Name(), tag)
 	ctx := context.Background()
 	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions {
-		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{tag}, Remove: true, NoCache: true,
+		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{pullPath}, NoCache: false,
 	})
 	if err != nil {
 		log.Println("ImageBuild ", err)
@@ -124,26 +126,6 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildR
 			_, err := reader.Body.Read(buf)
 			if err != nil {
 				if err == io.EOF {
-					break
-				}
-				log.Println("error reading response ", err)
-				continue
-			}
-			s := string(buf[:])
-			log.Println(s)
-			res.Log <- s
-		}
-		for {
-			pushReader, err := p.client.ImagePush(ctx, tag, types.ImagePushOptions{})
-			if err != nil {
-				close(res.Log)
-				log.Println("failed to push ", err)
-				break
-			}
-			buf := make([]byte, 512)
-			_, err = pushReader.Read(buf)
-			if err != nil {
-				if err == io.EOF {
 					close(res.Log)
 					break
 				}
@@ -154,9 +136,9 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildR
 			log.Println(s)
 			res.Log <- s
 		}
-	}()
 
-	res.PullPath = tag
+	}()
+	res.PullPath = pullPath
 	res.Tag = tag
 	return res, nil
 }
@@ -233,7 +215,7 @@ func (p *DockerService) buildDockerfile(path string, build Build) error {
 }
 
 func (p *DockerService) createBuildContext(path string) (io.Reader, error) {
-	return archive.Tar(path + "/", archive.Uncompressed)
+	return archive.Tar(path, archive.Uncompressed)
 }
 
 func (p *DockerService) contains(name string) bool {
