@@ -28,7 +28,7 @@ type appsRepository struct {
 	db         *gorm.DB
 	userRepo   UserRepository
 	gitService *git.GitService
-	k8s k8s.K8sService
+	k8s        k8s.K8sService
 }
 
 func NewAppRepository(
@@ -38,7 +38,7 @@ func NewAppRepository(
 	return &appsRepository{
 		db:         db,
 		gitService: service,
-		k8s: k8s,
+		k8s:        k8s,
 		userRepo:   NewUserRepository(db),
 	}
 }
@@ -53,7 +53,6 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 	if opt.Name == "" {
 		opt.Name = repo.randomAppName()
 	}
-
 	if exists := repo.AppExists(opt.Name, user.ID); exists {
 		return nil, fmt.Errorf("app with name %s already exists for your account", opt.Name)
 	}
@@ -97,6 +96,9 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 		if len(ports) > 0 {
 			port := ports[0].NodePort
 			app.AppUrl = fmt.Sprintf("http://localhost:%d", port)
+			if err := repo.updateApp(app); err != nil {
+				log.Println("failed to update app ", err)
+			}
 		}
 	}
 	return app, nil
@@ -152,4 +154,13 @@ func (repo *appsRepository) Logs(name string) (string, error) {
 func (repo *appsRepository) randomAppName() string {
 	seed := time.Now().UTC().UnixNano()
 	return namegenerator.NewNameGenerator(seed).Generate()
+}
+
+func (repo *appsRepository) updateApp(app *types.App) error {
+	err := repo.db.Table("apps").Where("id = ?", app.ID).
+		Update(app).Error
+	if err != nil {
+		return err
+	}
+	return nil
 }

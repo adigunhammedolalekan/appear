@@ -31,13 +31,13 @@ func main() {
 	out.Write([]byte("Building app..."))
 	req, err := http.NewRequest("POST", appBuildUrl, bytes.NewReader(j))
 	if err != nil {
-		out.Write([]byte("failed to build request"))
+		out.Write([]byte("failed to docker request"))
 		return
 	}
 
 	t, err := newTcpClient()
 	if err != nil {
-		out.Write([]byte("failed to build app. Internal TCP server error " + err.Error()))
+		out.Write([]byte("failed to docker app. Internal TCP server error " + err.Error()))
 		return
 	}
 
@@ -56,7 +56,7 @@ func main() {
 		return
 	}
 	type R struct {
-		Error bool `json:"error"`
+		Error   bool   `json:"error"`
 		Message string `json:"message"`
 	}
 	r := &R{}
@@ -67,8 +67,10 @@ func main() {
 	}
 	message := ""
 	if r.Error {
-		message = "failed to build app: " + r.Message
-	}else { message = "app built: " + message }
+		message = "failed to docker app: " + r.Message
+	} else {
+		message = "app built: " + message
+	}
 	out.Write([]byte(message))
 }
 

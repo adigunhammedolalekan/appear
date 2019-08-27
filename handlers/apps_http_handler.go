@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/adigunhammedolalekan/paas/build"
+	"github.com/adigunhammedolalekan/paas/docker"
 	"github.com/adigunhammedolalekan/paas/repos"
 	"github.com/adigunhammedolalekan/paas/server"
 	"github.com/adigunhammedolalekan/paas/types"
@@ -16,21 +16,24 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 )
 
-var repoBuildPath = "/Users/user/mnt/build"
+// var repoBuildPath = "/Users/user/mnt/docker"
 
 type AppsHandler struct {
 	tcp           *server.TcpServer
 	appRepo       repos.AppsRepository
-	dockerService *build.DockerService
+	dockerService *docker.DockerService
+	repoBuildPath string
 }
 
 func NewAppsHandler(
 	tcp *server.TcpServer,
 	repo repos.AppsRepository,
-	dockerService *build.DockerService) *AppsHandler {
-	return &AppsHandler{tcp: tcp, appRepo: repo, dockerService: dockerService}
+	dockerService *docker.DockerService,
+	repoBuildPath string) *AppsHandler {
+	return &AppsHandler{tcp: tcp, appRepo: repo, dockerService: dockerService, repoBuildPath: repoBuildPath}
 }
 
 func (handler *AppsHandler) CreateAppHandler(ctx *gin.Context) {
@@ -45,7 +48,7 @@ func (handler *AppsHandler) CreateAppHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: malformed JSON body"})
 		return
 	}
-
+	opt.UserId = user.ID
 	newApp, err := handler.appRepo.CreateApp(opt)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: err.Error()})
@@ -61,26 +64,24 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		return
 	}
 
-	log.Println(opt)
 	tcpPayload := &server.Payload{
 		Key: opt.Key,
 	}
 
 	repoPath := handler.resolveRepoUrl(opt.RepoPath)
 	repoUri := fmt.Sprintf("%s/%s", os.Getenv("REPO_SERVER_BASE_URL"), repoPath)
-	log.Println(repoUri)
 	app, err := handler.appRepo.GetAppByRepositoryUrl(repoUri)
 	if err != nil {
-		tcpPayload.Message = "404 app not found: failed to find app"
+		tcpPayload.Message = "404: app not found"
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
 		return
 	}
 
-	clonePath := filepath.Join(repoBuildPath, opt.RepoName)
+	clonePath := filepath.Join(handler.repoBuildPath, opt.RepoName)
 	commit, err := handler.appRepo.CloneRepository(handler.resolveRepoUsername(repoPath), clonePath, repoUri)
 	if err != nil && err != git.ErrRepositoryAlreadyExists {
-		tcpPayload.Message = "failed to build repo " + err.Error()
+		tcpPayload.Message = "failed to clone repo: " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
 		return
@@ -88,16 +89,15 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 
 	config, err := handler.readConfigFromRepo(app.Name, clonePath)
 	if err != nil {
-		tcpPayload.Message = "failed to read PaaS config. " + err.Error()
+		tcpPayload.Message = "failed to read config from repository: " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
 	}
 
 	user := commit.Author.Email
-	tcpPayload.Message = "calling user is " + user
 	handler.writeTcpMessage(tcpPayload)
-	result, err := handler.dockerService.BuildLocalImage(clonePath, build.CreateBuildFromConfig(config))
+	result, err := handler.dockerService.BuildLocalImage(clonePath, docker.CreateBuildFromConfig(config))
 	if err != nil {
-		tcpPayload.Message = "failed to build image " + err.Error()
+		tcpPayload.Message = "failed to build docker image: " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true})
 		return
@@ -107,17 +107,17 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 	}
 	for m := range result.Log {
 		s := &buildMessage{}
-		if err := json.Unmarshal([]byte(m), s); err != nil {
-			log.Println("json error ", err)
+		if err := json.Unmarshal([]byte(handler.validUtf8String(m)), s); err != nil {
+			log.Println("json error: ", err)
 			s.Stream = m
 		}
 		tcpPayload.Message = s.Stream
 		handler.writeTcpMessage(tcpPayload)
 	}
-	handler.writeTcpMessage(tcpPayload)
+
 	pushChan, err := handler.dockerService.PushImage(result.PullPath)
 	if err != nil {
-		tcpPayload.Message = "failed to push image " + err.Error()
+		tcpPayload.Message = "failed to push image: " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
 		return
@@ -129,7 +129,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 
 	app.ImageName = result.PullPath
 	if err := handler.appRepo.UpdateDeployment(app); err != nil {
-		tcpPayload.Message = "failed to update deployment " + err.Error()
+		tcpPayload.Message = "failed to update deployment: " + err.Error()
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
 		return
@@ -138,7 +138,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 	if err := handler.appRepo.LogDeploymentEvent(user, app.ID); err != nil {
 		tcpPayload.Message = "failed to log deployment event"
 		handler.writeTcpMessage(tcpPayload)
-		ctx.JSON(http.StatusOK, &Response{Error: true})
+		ctx.JSON(http.StatusOK, &Response{Error: true, Message: err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, nil)
@@ -176,18 +176,28 @@ func (handler *AppsHandler) writeTcpMessage(p *server.Payload) {
 	}
 }
 
-func (handler *AppsHandler) readConfigFromRepo(appName, path string) (*build.Config, error) {
+func (handler *AppsHandler) readConfigFromRepo(appName, path string) (*docker.Config, error) {
 	fullpath := filepath.Join(path, "paas_config.json")
 	data, err := ioutil.ReadFile(fullpath)
-	defaultConfig := &build.Config{Name: appName}
+	defaultConfig := &docker.Config{Name: appName}
 	if err != nil {
 		return defaultConfig, errors.New("paas_config.json is missing")
 	}
-	cfg := &build.Config{}
+	cfg := &docker.Config{}
 	if err := json.Unmarshal(data, cfg); err != nil {
 		return defaultConfig, errors.New("failed to read paas_config.json. malformed json data")
 	}
 	return cfg, nil
+}
+
+func (handler *AppsHandler) validUtf8String(s string) string {
+	validUtf8 := func(r rune) rune {
+		if r == utf8.RuneError {
+			return -1
+		}
+		return r
+	}
+	return strings.Map(validUtf8, s)
 }
 
 type Response struct {

@@ -1,4 +1,4 @@
-package build
+package docker
 
 import (
 	"bytes"
@@ -16,14 +16,13 @@ import (
 	"strings"
 )
 
-const goBuildCommand = "RUN CGO_ENABLED=0 GOOS=linux go build -o %s -a -installsuffix cgo -ldflags '-w'\n"
+const goBuildCommand = "RUN CGO_ENABLED=0 GOOS=linux go docker -o %s -a -installsuffix cgo -ldflags '-w'\n"
 
 type DockerService struct {
 	client            *client.Client
 	dockerFileBuilder bytes.Buffer
 }
-
-type DockerBuildResult struct {
+type BuildResult struct {
 	Tag      string
 	PullPath string
 	Log      chan string
@@ -93,33 +92,29 @@ func (p *DockerService) tagImage(name string) (string, error) {
 	return target, p.client.ImageTag(ctx, source, target)
 }
 
-func (p *DockerService) BuildLocalImage(path string, build Build) (*DockerBuildResult, error) {
+func (p *DockerService) BuildLocalImage(path string, build Build) (*BuildResult, error) {
 	err := p.buildDockerfile(path, build)
 	if err != nil {
-		log.Println("buildDockerfile ", err)
 		return nil, err
 	}
-
+	res := &BuildResult{
+		Log: make(chan string, 1),
+	}
+	res.Log <- "Dockerfile detected"
 	buildCtx, err := p.createBuildContext(path)
 	if err != nil {
-		log.Println("createBuildContext ", err)
 		return nil, err
 	}
 
 	tag := p.md5()[:6]
 	pullPath := fmt.Sprintf("%s%s:%s", "localhost:5000/", build.Name(), tag)
 	ctx := context.Background()
-	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions {
+	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions{
 		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{pullPath}, NoCache: false,
 	})
 	if err != nil {
-		log.Println("ImageBuild ", err)
 		return nil, err
 	}
-	res := &DockerBuildResult{
-		Log: make(chan string, 1),
-	}
-
 	go func() {
 		for {
 			buf := make([]byte, 512)
@@ -147,7 +142,6 @@ func (p *DockerService) buildDockerfile(path string, build Build) error {
 	// check for Dockerfile presence and just return
 	// to caller if we already have a Dockerfile
 	dockerfile := filepath.Join(path, "Dockerfile")
-	log.Println("Dockerfile", dockerfile)
 	if _, err := os.Stat(dockerfile); err == nil {
 		// we have a Dockerfile
 		return nil
@@ -216,16 +210,6 @@ func (p *DockerService) buildDockerfile(path string, build Build) error {
 
 func (p *DockerService) createBuildContext(path string) (io.Reader, error) {
 	return archive.Tar(path, archive.Uncompressed)
-}
-
-func (p *DockerService) contains(name string) bool {
-	paths := []string{"node_modules"}
-	for _, v := range paths {
-		if v == name {
-			return true
-		}
-	}
-	return false
 }
 
 func (p *DockerService) write(s string) error {

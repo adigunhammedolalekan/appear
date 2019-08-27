@@ -14,10 +14,10 @@ services:
       - /Users/user/mnt/registry/data:/var/lib/registry
      # - /Users/user/mnt/registry/auth:/auth
   #paas:
-   # build: .
+   # docker: .
     #volumes:
      # - /var/repos:/var/repos
-      #- /var/repos/build:/var/repos/build # build dirs
+      #- /var/repos/docker:/var/repos/docker # docker dirs
       #- /var/repos/hooks_executor.go:/var/repos/hooks_executor.go
     #ports:
      # - "9798:9798"

@@ -1,4 +1,4 @@
-package server
+package fn
 
 import (
 	"errors"

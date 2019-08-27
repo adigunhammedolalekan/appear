@@ -16,32 +16,30 @@ import (
 	"path/filepath"
 )
 
-const gitStoragePath = "/Users/user/mnt/repos"
+// const gitStoragePath = "/Users/user/mnt/repos"
 const postReceiveHookPath = "./hooks_executor.go"
 
 type GitService struct {
 	Server *gitkit.Server
+	gitStoragePath string
 }
 
-func NewService(db *gorm.DB) (*GitService, error) {
+func NewService(db *gorm.DB, gitStoragePath string) (*GitService, error) {
 	service := gitkit.New(gitkit.Config{
 		Dir:  gitStoragePath,
 		Auth: true,
 	})
-
 	service.AuthFunc = func(credential gitkit.Credential, request *gitkit.Request) (b bool, e error) {
-		// log.Println(request.RepoPath, request.RepoName)
 		return verifyRepositoryUser(db, credential.Username, credential.Password)
 	}
-
 	if err := service.Setup(); err != nil {
 		return nil, err
 	}
-	return &GitService{Server: service}, nil
+	return &GitService{Server: service, gitStoragePath: gitStoragePath}, nil
 }
 
 func (s *GitService) CreateNewRepository(appName, repoName string) error {
-	fullpath := filepath.Join(gitStoragePath, appName, fmt.Sprintf("%s%s", repoName, ".git"))
+	fullpath := filepath.Join(s.gitStoragePath, appName, fmt.Sprintf("%s%s", repoName, ".git"))
 	if err := os.MkdirAll(fullpath, os.ModePerm); err != nil {
 		return err
 	}
@@ -95,17 +93,19 @@ func (s *GitService) writeHookExecutor(hookPath string) error {
 }
 
 func (s *GitService) postReceiveHookContent() string {
-	return fmt.Sprintf("#!/bin/sh\necho %q\ndir=`pwd`\necho $dir\ngo run hooks/main.go", "executing post receive!")
+	return fmt.Sprintf("#!/bin/sh\ngo run hooks/main.go")
 }
 
 func (s *GitService) CloneRepository(username, clonePath, gitUrl string) (*object.Commit, error) {
-	userDir := filepath.Join(gitStoragePath, username)
+	userDir := filepath.Join(s.gitStoragePath, username)
 	if err := os.MkdirAll(userDir, os.ModePerm); err != nil {
 		log.Println("failed to create user repos dir! ", err)
 	}
-
+	if err := os.RemoveAll(clonePath); err != nil {
+		log.Println("failed to remove old repo cloned path ", err)
+	}
 	repo, err := git.PlainClone(clonePath, false, &git.CloneOptions{
-		URL:  gitUrl,
+		URL: gitUrl,
 		Auth: &http.BasicAuth{
 			Username: os.Getenv("ADMIN_REPO_KEY"), Password: os.Getenv("ADMIN_REPO_KEY"),
 		},
@@ -118,7 +118,6 @@ func (s *GitService) CloneRepository(username, clonePath, gitUrl string) (*objec
 		log.Println("failed to open repo ", clonePath, err)
 		return nil, err
 	}
-
 	h, err := repo.Head()
 	if err != nil {
 		return nil, err

@@ -3,11 +3,13 @@ package k8s
 import (
 	"errors"
 	"fmt"
-	"github.com/adigunhammedolalekan/paas/build"
+	"github.com/adigunhammedolalekan/paas/docker"
 	"github.com/adigunhammedolalekan/paas/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	extensions "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
@@ -17,13 +19,15 @@ import (
 	"strings"
 )
 
-const nameSpace = "default"
-const stablePort = 6001
+const nameSpace = "appear-namespace"
+const stablePort = 6003
+
 type K8sService interface {
 	NginxDeployment(app *types.App) error
 	GetService(name string) *v1.Service
 	UpdateDeployment(app *types.App) error
 	Logs(appName string) (string, error)
+	ScaleApp(deploymentName string, replica int32) error
 }
 
 type PaasK8sService struct {
@@ -41,38 +45,46 @@ func NewK8sService() (K8sService, error) {
 		return nil, err
 	}
 	service := &PaasK8sService{client: client}
-	if err := service.createNS(); err != nil {
+	if err := service.createNameSpaceIfNotExists(); err != nil {
 		return nil, err
 	}
 	return service, nil
 }
 
+// NginxDeployment is the default nginx image that'll be deployed
+// when a new app is created
 func (service *PaasK8sService) NginxDeployment(app *types.App) error {
-	labels := map[string]string{"app" : app.Name}
+	labels := map[string]string{"app": app.Name}
 	if err := service.createK8sDeployment(app.DeploymentName(),
 		"nginx", labels, nil, stablePort); err != nil {
 		log.Println("[k8s]: failed to create deployment for app ", app.Name, err)
 		return err
 	}
-	if err := service.createK8sService(app.Name, labels); err != nil {
+	if err := service.createK8sService(app.Name, labels, 80, 0); err != nil {
 		log.Println("[K8s]: failed to create service for app ", app.Name, err)
 		return err
+	}
+	if err := service.createIngressForService(service.GetService(app.Name)); err != nil {
+		log.Println("failed to create Ingress for service: ", err)
 	}
 	return nil
 }
 
 func (service *PaasK8sService) createK8sService(name string,
-	labels map[string]string) error {
+	labels map[string]string, servicePort, nodePort int32) error {
 	svc := &v1.Service{}
 	svc.Name = name
 	svc.Labels = labels
 	svc.Namespace = nameSpace
+	port := v1.ServicePort{Name: "http", Protocol: "TCP", Port: servicePort}
+	if nodePort != 0 {
+		port.NodePort = nodePort
+	}
+	ports := []v1.ServicePort{port}
 	svc.Spec = v1.ServiceSpec{
-		Type: v1.ServiceTypeNodePort,
+		Type:     v1.ServiceTypeNodePort,
 		Selector: labels,
-		Ports: []v1.ServicePort{
-			{Name: "http", Protocol: "TCP", Port: stablePort},
-		},
+		Ports: ports,
 	}
 	_, err := service.client.CoreV1().Services(nameSpace).Create(svc)
 	if err != nil {
@@ -83,25 +95,24 @@ func (service *PaasK8sService) createK8sService(name string,
 
 func (service *PaasK8sService) createK8sDeployment(name, imageName string,
 	labels map[string]string,
-	envVars []build.EnvVar,
-	servicePort int32) error {
+	envVars []docker.EnvVar, port int32) error {
 
 	deployment := &appsv1.Deployment{}
 	deployment.Name = name
 	deployment.Labels = labels
 
-	// build environment variables
+	// docker environment variables
 	envs := make([]v1.EnvVar, 0, len(envVars))
 	for _, v := range envVars {
 		e := v1.EnvVar{Name: v.Key, Value: v.Value}
 		envs = append(envs, e)
 	}
-	envs = append(envs, v1.EnvVar{Name: "PORT", Value: fmt.Sprintf("%d", servicePort)})
+	envs = append(envs, v1.EnvVar{Name: "PORT", Value: fmt.Sprintf("%d", port)})
 	container := v1.Container{}
 	container.Name = fmt.Sprintf("%s-container", name)
 	container.Image = imageName
 	container.Ports = []v1.ContainerPort{
-		{Name: "http-port", ContainerPort: servicePort},
+		{Name: "http-port", ContainerPort: port},
 	}
 	container.Env = envs
 	container.ImagePullPolicy = v1.PullAlways
@@ -143,6 +154,25 @@ func (service *PaasK8sService) UpdateDeployment(app *types.App) error {
 
 	log.Println("Updating deployment for ", app.ImageName)
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		oldPort := svc.Spec.Ports[0].NodePort
+		if err := service.client.CoreV1().Services(nameSpace).Delete(svc.Name,
+			&metav1.DeleteOptions{}); err != nil {
+			log.Println("failed to delete service ", err)
+			return err
+		}
+		labels := map[string]string{"app" : app.Name}
+		if err := service.createK8sService(app.Name, labels, stablePort, oldPort); err != nil {
+			log.Println("failed to create new service for updated app: ", err)
+			return err
+		}
+		if err := service.deleteIngress(svc.Name); err != nil {
+			log.Println("failed to delete service Ingress ", err)
+			return err
+		}
+		if err := service.createIngressForService(svc); err != nil {
+			log.Println("failed to create ingress for service ", err)
+			return err
+		}
 		deployment, err := service.client.AppsV1().Deployments(nameSpace).Get(app.DeploymentName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -161,7 +191,7 @@ func (service *PaasK8sService) UpdateDeployment(app *types.App) error {
 	return nil
 }
 
-func (service *PaasK8sService) createNS() error {
+func (service *PaasK8sService) createNameSpaceIfNotExists() error {
 	ns := &v1.Namespace{}
 	ns.Name = nameSpace
 	_, err := service.client.CoreV1().Namespaces().Create(ns)
@@ -198,6 +228,56 @@ func (service *PaasK8sService) Logs(appName string) (string, error) {
 		}
 	}
 	return logsString.String(), nil
+}
+
+func (service *PaasK8sService) ScaleApp(deploymentName string, replica int32) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		deploymentClient := service.client.AppsV1().Deployments(nameSpace)
+		deployment, err := deploymentClient.Get(deploymentName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		deployment.Spec.Replicas = Int32(replica)
+		if _, err := deploymentClient.Update(deployment); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (service *PaasK8sService) createIngressForService(svc *v1.Service) error {
+	if svc == nil {
+		return errors.New("target service not found")
+	}
+	name := fmt.Sprintf("%s-ingress", svc.Name)
+	ingress := &extensions.Ingress{}
+	ingress.Name = name
+	backend := &extensions.IngressBackend{
+		ServiceName: svc.Name,
+		ServicePort: intstr.IntOrString{IntVal: stablePort},
+	}
+	ingress.Spec.Backend = backend
+	ingressRule := extensions.IngressRule{}
+	ingressRule.HTTP = &extensions.HTTPIngressRuleValue{}
+	ingressRule.HTTP.Paths = []extensions.HTTPIngressPath{
+		{Path: fmt.Sprintf("/%s", svc.Name), Backend: *backend},
+	}
+	ingress.Spec.Rules = []extensions.IngressRule{
+		ingressRule,
+	}
+	if _, err := service.client.ExtensionsV1beta1().Ingresses(nameSpace).Create(ingress); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) deleteIngress(name string) error {
+	client := service.client.ExtensionsV1beta1().Ingresses(nameSpace)
+	ingressName := fmt.Sprintf("%s-ingress", name)
+	if err := client.Delete(ingressName, &metav1.DeleteOptions{}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func Int32(i int32) *int32 {

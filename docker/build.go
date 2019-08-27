@@ -1,7 +1,7 @@
-package build
+package docker
 
 type Build interface {
-	// build language
+	// docker language
 	Stack() string
 	// dependency manager used. e.g npm for Nodejs, dep for Go etc..
 	Deps() string
@@ -26,10 +26,10 @@ type EnvVar struct {
 
 type Config struct {
 	Language string
-	Dep string
-	Exec string
-	Name string
-	Envs map[string]string
+	Dep      string
+	Exec     string
+	Name     string
+	Envs     map[string]string
 }
 
 func CreateBuildFromConfig(cfg *Config) Build {
@@ -86,16 +86,16 @@ func (g GolangBuild) BaseDir() string {
 }
 
 type NodeJsBuild struct {
-	dep string
-	envs map[string]string
-	exec string
-	name string
+	dep     string
+	envs    map[string]string
+	exec    string
+	name    string
 	baseDir string
 }
 
 func nodeJsBuildFromConfig(cfg *Config) NodeJsBuild {
 	return NodeJsBuild{
-		dep: cfg.Dep,
+		dep:  cfg.Dep,
 		envs: cfg.Envs,
 		exec: cfg.Exec,
 		name: cfg.Name,

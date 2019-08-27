@@ -50,7 +50,7 @@ func (s *TcpServer) Run() error {
 	if err != nil {
 		return err
 	}
-
+	log.Println("Started tcp server at ", s.addr)
 	for {
 		conn, err := handle.Accept()
 		if err != nil {
@@ -64,13 +64,11 @@ func (s *TcpServer) Run() error {
 func (s *TcpServer) handleConn(conn net.Conn) {
 	for {
 		buf := bufio.NewReader(conn)
-
 		m, err := buf.ReadString(byte('\n'))
 		if err != nil || err == io.EOF {
 			log.Println("[TCP]: error reading from client ", err)
 			break
 		}
-
 		message := s.parseMessage(strings.TrimSpace(m))
 		if message != nil {
 			if message.ActionString() == "connect" {
@@ -95,7 +93,7 @@ func (s *TcpServer) Write(p *Payload) error {
 	s.mtx.Unlock()
 
 	if !ok {
-		return fmt.Errorf("net.Conn not found for key %s", p.KeyString())
+		return fmt.Errorf("[TCP]: net.Conn not found for key %s", p.KeyString())
 	}
 
 	n, err := conn.Write([]byte(fmt.Sprintf("%s\n", p.Message)))
@@ -112,6 +110,5 @@ func (s *TcpServer) parseMessage(m string) *ConnMessage {
 	if len(parts) != 2 {
 		return nil
 	}
-
 	return &ConnMessage{Action: parts[0], Key: parts[1]}
 }

@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/adigunhammedolalekan/paas/server"
+	"github.com/adigunhammedolalekan/paas/fn"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jinzhu/gorm"
 	"strings"
@@ -21,8 +21,8 @@ type App struct {
 	UserId     uint        `json:"user_id"`
 	Name       string      `json:"app_name"`
 	RepoUrl    string      `json:"repo_url"`
-	AppUrl string `json:"app_url"`
-	ImageName string `json:"image_name"`
+	AppUrl     string      `json:"app_url"`
+	ImageName  string      `json:"image_name"`
 	Credential *Credential `json:"credential" gorm:"-"`
 	User       *User       `json:"user" gorm:"-"`
 }
@@ -48,7 +48,7 @@ func NewApp(name, repoUrl string, userId uint) *App {
 }
 
 func NewCredential(appId uint) *Credential {
-	return &Credential{AppId: appId, Secret: server.GenerateRandomString(64)}
+	return &Credential{AppId: appId, Secret: fn.GenerateRandomString(64)}
 }
 
 func (u *User) UniqueName() string {

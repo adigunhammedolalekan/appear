@@ -122,15 +122,12 @@ func (repo *userRepository) VerifyToken(inputToken string) (*types.User, error) 
 	if err != nil {
 		return nil, err
 	}
-
 	if !tk.Valid {
 		return nil, errors.New("invalid token supplied")
 	}
-
 	user := repo.GetUser(token.Email)
 	if user == nil {
 		return nil, errors.New("token user not found")
 	}
-
 	return user, nil
 }
