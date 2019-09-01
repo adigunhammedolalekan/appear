@@ -32,7 +32,7 @@ type Config struct {
 	Exec     string
 	Name     string
 	Envs     []EnvVar
-	Host 	 string
+	Host     string
 }
 
 func CreateBuildFromConfig(cfg *Config) Build {

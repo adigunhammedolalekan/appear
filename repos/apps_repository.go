@@ -103,7 +103,7 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 	}
 	if appHost != "" {
 		app.AppUrl = appHost
-	}else {
+	} else {
 		app.AppUrl = fmt.Sprintf("http://localhost/%s", app.Name)
 	}
 	if err := repo.updateApp(app); err != nil {

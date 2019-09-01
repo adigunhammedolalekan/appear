@@ -8,5 +8,5 @@ type Configuration struct {
 		MasterAuthKey string `json:"master_authorization_key"`
 	} `json:"auth"`
 	K8sConfigDir string `json:"k_8_s_config_dir"`
-	Host string `json:"host"`
+	Host         string `json:"host"`
 }

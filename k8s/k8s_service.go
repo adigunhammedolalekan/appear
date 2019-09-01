@@ -1,6 +1,6 @@
 package k8s
 
-import(
+import (
 	"errors"
 	"fmt"
 	"github.com/adigunhammedolalekan/paas/docker"
@@ -278,8 +278,8 @@ func (service *PaasK8sService) createIngressForService(svc *v1.Service, port int
 	// kubernetes.io/ingress.class: "nginx"
 	// nginx.ingress.kubernetes.io/rewrite-target: /$1
 	ingress.Annotations = map[string]string{
-		"kubernetes.io/ingress.class" : "nginx",
-		"nginx.ingress.kubernetes.io/rewrite-target" : "/$1",
+		"kubernetes.io/ingress.class":                "nginx",
+		"nginx.ingress.kubernetes.io/rewrite-target": "/$1",
 	}
 	ingress.Name = name
 	backend := &extensions.IngressBackend{
@@ -312,13 +312,13 @@ func (service *PaasK8sService) deleteIngress(name string) error {
 
 func (service *PaasK8sService) createDatabaseLbService(name string, port int32) error {
 	svc := &v1.Service{}
-	labels := map[string]string{"database" : name}
+	labels := map[string]string{"database": name}
 	svc.Name = name
 	svc.Labels = labels
 	svc.Spec = v1.ServiceSpec{
 		Selector: labels,
-		Type: v1.ServiceTypeLoadBalancer,
-		Ports: []v1.ServicePort{{Name: "db-port", Protocol: "TCP", Port: port}},
+		Type:     v1.ServiceTypeLoadBalancer,
+		Ports:    []v1.ServicePort{{Name: "db-port", Protocol: "TCP", Port: port}},
 	}
 	if _, err := service.client.CoreV1().Services(nameSpace).Create(svc); err != nil {
 		return err
@@ -328,7 +328,7 @@ func (service *PaasK8sService) createDatabaseLbService(name string, port int32) 
 
 func (service *PaasK8sService) CreateDatabaseStatefulSet(name, imageName string) error {
 	serviceName := fmt.Sprintf("%s-service", name)
-	labels := map[string]string{"database" : name}
+	labels := map[string]string{"database": name}
 	statefullSetClient := service.client.AppsV1().StatefulSets(nameSpace)
 	template := v1.PodTemplateSpec{
 		Spec: v1.PodSpec{
@@ -342,7 +342,7 @@ func (service *PaasK8sService) CreateDatabaseStatefulSet(name, imageName string)
 	statefulSet.Name = fmt.Sprintf("%s-statefulset", name)
 	statefulSet.Labels = labels
 	statefulSet.Spec = appsv1.StatefulSetSpec{
-		Replicas: Int32(1),
+		Replicas:    Int32(1),
 		ServiceName: serviceName,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: labels,

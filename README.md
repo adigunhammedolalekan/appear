@@ -1,2 +1,2 @@
 # PaaS
-my naive attempt at building a Platform as a Service using git, Docker and Kubernetes
+Deploy docker images in k8s clusters. [Work in Progress]

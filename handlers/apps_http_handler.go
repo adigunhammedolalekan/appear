@@ -100,7 +100,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true})
 		return
-	}else {
+	} else {
 		tcpPayload.Message = "config parse!"
 		handler.writeTcpMessage(tcpPayload)
 	}

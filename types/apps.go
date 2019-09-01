@@ -30,7 +30,7 @@ type App struct {
 	ImageName  string      `json:"image_name"`
 	Credential *Credential `json:"credential" gorm:"-"`
 	User       *User       `json:"user" gorm:"-"`
-	Host string `json:"host"`
+	Host       string      `json:"host"`
 }
 
 type Token struct {
