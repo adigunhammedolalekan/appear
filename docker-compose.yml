@@ -6,22 +6,8 @@ services:
     image: registry:2
     ports:
       - 5000:5000
-    #environment:
-      #REGISTRY_AUTH: htpasswd
-      #REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-      #REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
     volumes:
       - /Users/user/mnt/registry/data:/var/lib/registry
-     # - /Users/user/mnt/registry/auth:/auth
-  #paas:
-   # docker: .
-    #volumes:
-     # - /var/repos:/var/repos
-      #- /var/repos/docker:/var/repos/docker # docker dirs
-      #- /var/repos/hooks_executor.go:/var/repos/hooks_executor.go
-    #ports:
-     # - "9798:9798"
-      #- "9007:9007"
   pgdatabase:
     image: postgres:10.4
     container_name: pgdatabase
