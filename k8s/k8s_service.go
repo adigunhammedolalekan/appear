@@ -1,6 +1,6 @@
 package k8s
 
-import (
+import(
 	"errors"
 	"fmt"
 	"github.com/adigunhammedolalekan/paas/docker"
@@ -28,6 +28,7 @@ type K8sService interface {
 	UpdateDeployment(app *types.App) error
 	Logs(appName string) (string, error)
 	ScaleApp(deploymentName string, replica int32) error
+	GetPodNode(podName string) (*v1.Node, error)
 }
 
 type PaasK8sService struct {
@@ -64,7 +65,7 @@ func (service *PaasK8sService) NginxDeployment(app *types.App) error {
 		log.Println("[K8s]: failed to create service for app ", app.Name, err)
 		return err
 	}
-	if err := service.createIngressForService(service.GetService(app.Name)); err != nil {
+	if err := service.createIngressForService(service.GetService(app.Name), 80); err != nil {
 		log.Println("failed to create Ingress for service: ", err)
 	}
 	return nil
@@ -84,7 +85,7 @@ func (service *PaasK8sService) createK8sService(name string,
 	svc.Spec = v1.ServiceSpec{
 		Type:     v1.ServiceTypeNodePort,
 		Selector: labels,
-		Ports: ports,
+		Ports:    ports,
 	}
 	_, err := service.client.CoreV1().Services(nameSpace).Create(svc)
 	if err != nil {
@@ -160,7 +161,7 @@ func (service *PaasK8sService) UpdateDeployment(app *types.App) error {
 			log.Println("failed to delete service ", err)
 			return err
 		}
-		labels := map[string]string{"app" : app.Name}
+		labels := map[string]string{"app": app.Name}
 		if err := service.createK8sService(app.Name, labels, stablePort, oldPort); err != nil {
 			log.Println("failed to create new service for updated app: ", err)
 			return err
@@ -169,17 +170,19 @@ func (service *PaasK8sService) UpdateDeployment(app *types.App) error {
 			log.Println("failed to delete service Ingress ", err)
 			return err
 		}
-		if err := service.createIngressForService(svc); err != nil {
+		if err := service.createIngressForService(svc, stablePort); err != nil {
 			log.Println("failed to create ingress for service ", err)
 			return err
 		}
 		deployment, err := service.client.AppsV1().Deployments(nameSpace).Get(app.DeploymentName(), metav1.GetOptions{})
 		if err != nil {
+			log.Println("failed to get deployment object ", err)
 			return err
 		}
 		deployment.Spec.Template.Spec.Containers[0].Image = app.ImageName
 		deploymentClient := service.client.AppsV1().Deployments(nameSpace)
 		if _, err := deploymentClient.Update(deployment); err != nil {
+			log.Println("failed to update deployment ", err)
 			return err
 		}
 		return nil
@@ -222,8 +225,8 @@ func (service *PaasK8sService) Logs(appName string) (string, error) {
 				if err != nil {
 					break
 				}
-				log.Println(string(b[:]))
 				logsString.WriteString(string(b[:]))
+				log.Println(string(b[:]))
 			}
 		}
 	}
@@ -245,22 +248,49 @@ func (service *PaasK8sService) ScaleApp(deploymentName string, replica int32) er
 	})
 }
 
-func (service *PaasK8sService) createIngressForService(svc *v1.Service) error {
+func (service *PaasK8sService) UpdateEnvironmentVars(app *types.App, envs []docker.EnvVar) error {
+	c := service.client.AppsV1().Deployments(nameSpace)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		deployment, err := c.Get(app.DeploymentName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		for _, v := range envs {
+			deployment.Spec.Template.Spec.Containers[0].Env = append(
+				deployment.Spec.Template.Spec.Containers[0].Env, v1.EnvVar{Name: v.Key, Value: v.Value},
+			)
+		}
+		if _, err := c.Update(deployment); err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (service *PaasK8sService) createIngressForService(svc *v1.Service, port int32) error {
 	if svc == nil {
 		return errors.New("target service not found")
 	}
 	name := fmt.Sprintf("%s-ingress", svc.Name)
 	ingress := &extensions.Ingress{}
+	// add re-write anotations
+	// so that app can be accessed from the same host
+	// kubernetes.io/ingress.class: "nginx"
+	// nginx.ingress.kubernetes.io/rewrite-target: /$1
+	ingress.Annotations = map[string]string{
+		"kubernetes.io/ingress.class" : "nginx",
+		"nginx.ingress.kubernetes.io/rewrite-target" : "/$1",
+	}
 	ingress.Name = name
 	backend := &extensions.IngressBackend{
 		ServiceName: svc.Name,
-		ServicePort: intstr.IntOrString{IntVal: stablePort},
+		ServicePort: intstr.IntOrString{IntVal: port},
 	}
 	ingress.Spec.Backend = backend
 	ingressRule := extensions.IngressRule{}
 	ingressRule.HTTP = &extensions.HTTPIngressRuleValue{}
 	ingressRule.HTTP.Paths = []extensions.HTTPIngressPath{
-		{Path: fmt.Sprintf("/%s", svc.Name), Backend: *backend},
+		{Path: fmt.Sprintf("/%s/?(.*)", svc.Name), Backend: *backend},
 	}
 	ingress.Spec.Rules = []extensions.IngressRule{
 		ingressRule,
@@ -280,6 +310,86 @@ func (service *PaasK8sService) deleteIngress(name string) error {
 	return nil
 }
 
+func (service *PaasK8sService) createDatabaseLbService(name string, port int32) error {
+	svc := &v1.Service{}
+	labels := map[string]string{"database" : name}
+	svc.Name = name
+	svc.Labels = labels
+	svc.Spec = v1.ServiceSpec{
+		Selector: labels,
+		Type: v1.ServiceTypeLoadBalancer,
+		Ports: []v1.ServicePort{{Name: "db-port", Protocol: "TCP", Port: port}},
+	}
+	if _, err := service.client.CoreV1().Services(nameSpace).Create(svc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) CreateDatabaseStatefulSet(name, imageName string) error {
+	serviceName := fmt.Sprintf("%s-service", name)
+	labels := map[string]string{"database" : name}
+	statefullSetClient := service.client.AppsV1().StatefulSets(nameSpace)
+	template := v1.PodTemplateSpec{
+		Spec: v1.PodSpec{
+			TerminationGracePeriodSeconds: Int64(10),
+			Containers: []v1.Container{
+				{Image: imageName},
+			},
+		},
+	}
+	statefulSet := &appsv1.StatefulSet{}
+	statefulSet.Name = fmt.Sprintf("%s-statefulset", name)
+	statefulSet.Labels = labels
+	statefulSet.Spec = appsv1.StatefulSetSpec{
+		Replicas: Int32(1),
+		ServiceName: serviceName,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: labels,
+		},
+		Template: template,
+	}
+	if _, err := statefullSetClient.Create(statefulSet); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) GetPodNode(podName string) (*v1.Node, error) {
+	pods, err := service.client.CoreV1().Pods(nameSpace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range pods.Items {
+		if strings.HasPrefix(p.Name, podName) {
+			return service.getNode(p.Spec.NodeName)
+		}
+	}
+	return nil, errors.New("node not found")
+}
+
+func (service *PaasK8sService) getNode(nodeName string) (*v1.Node, error) {
+	node, err := service.client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func (service *PaasK8sService) GetIngress(name string) (*extensions.Ingress, error) {
+	ingress, err := service.client.ExtensionsV1beta1().Ingresses(nameSpace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return ingress, nil
+}
+
 func Int32(i int32) *int32 {
+	return &i
+}
+func String(s string) *string {
+	return &s
+}
+func Int64(i int64) *int64 {
 	return &i
 }

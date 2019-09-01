@@ -20,7 +20,7 @@ import (
 const postReceiveHookPath = "./hooks_executor.go"
 
 type GitService struct {
-	Server *gitkit.Server
+	Server         *gitkit.Server
 	gitStoragePath string
 }
 

@@ -4,5 +4,6 @@
   "envs" : [
     {"key" : "value"},
     {"key" : "value"}
-  ]
+  ],
+  "host" : ""
 }

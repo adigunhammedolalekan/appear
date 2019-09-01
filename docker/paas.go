@@ -108,6 +108,7 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*BuildResult,
 
 	tag := p.md5()[:6]
 	pullPath := fmt.Sprintf("%s%s:%s", "localhost:5000/", build.Name(), tag)
+	log.Println("PullPath ", pullPath)
 	ctx := context.Background()
 	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions{
 		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{pullPath}, NoCache: false,

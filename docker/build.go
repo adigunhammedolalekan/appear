@@ -1,5 +1,7 @@
 package docker
 
+import "log"
+
 type Build interface {
 	// docker language
 	Stack() string
@@ -29,10 +31,12 @@ type Config struct {
 	Dep      string
 	Exec     string
 	Name     string
-	Envs     map[string]string
+	Envs     []EnvVar
+	Host 	 string
 }
 
 func CreateBuildFromConfig(cfg *Config) Build {
+	log.Println(cfg)
 	switch cfg.Language {
 	case "Go":
 		return GolangBuild{}
@@ -42,7 +46,7 @@ func CreateBuildFromConfig(cfg *Config) Build {
 
 type GolangBuild struct {
 	dep     string
-	envs    map[string]string
+	envs    []EnvVar
 	exec    string
 	name    string
 	baseDir string
@@ -63,7 +67,8 @@ func (g GolangBuild) BaseImage() string {
 func (g GolangBuild) EnvVars() []EnvVar {
 	vars := make([]EnvVar, 0)
 	for k := range g.envs {
-		env := EnvVar{Key: k, Value: g.envs[k]}
+		e := g.envs[k]
+		env := EnvVar{Key: e.Key, Value: e.Value}
 		vars = append(vars, env)
 	}
 	return vars
@@ -94,9 +99,9 @@ type NodeJsBuild struct {
 }
 
 func nodeJsBuildFromConfig(cfg *Config) NodeJsBuild {
+	log.Println(cfg)
 	return NodeJsBuild{
 		dep:  cfg.Dep,
-		envs: cfg.Envs,
 		exec: cfg.Exec,
 		name: cfg.Name,
 	}

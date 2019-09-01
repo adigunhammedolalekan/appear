@@ -8,6 +8,7 @@ import (
 	"github.com/goombaio/namegenerator"
 	"github.com/jinzhu/gorm"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	v1 "k8s.io/api/core/v1"
 	"log"
 	"os"
 	"time"
@@ -90,18 +91,25 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
-	svc := repo.k8s.GetService(opt.Name)
-	if svc != nil {
-		ports := svc.Spec.Ports
-		if len(ports) > 0 {
-			port := ports[0].NodePort
-			app.AppUrl = fmt.Sprintf("http://localhost:%d", port)
-			if err := repo.updateApp(app); err != nil {
-				log.Println("failed to update app ", err)
+	appHost := ""
+	node, err := repo.k8s.GetPodNode(app.DeploymentName())
+	if err == nil {
+		addresses := node.Status.Addresses
+		for _, addr := range addresses {
+			if addr.Type == v1.NodeExternalIP {
+				appHost = addr.Address
 			}
 		}
 	}
-	return app, nil
+	if appHost != "" {
+		app.AppUrl = appHost
+	}else {
+		app.AppUrl = fmt.Sprintf("http://localhost/%s", app.Name)
+	}
+	if err := repo.updateApp(app); err != nil {
+		log.Println("failed to update app ", err)
+	}
+	return repo.getApp(app.ID), nil
 }
 
 func (repo *appsRepository) ListApps(id uint) ([]*types.App, error) {
@@ -154,6 +162,15 @@ func (repo *appsRepository) Logs(name string) (string, error) {
 func (repo *appsRepository) randomAppName() string {
 	seed := time.Now().UTC().UnixNano()
 	return namegenerator.NewNameGenerator(seed).Generate()
+}
+
+func (repo *appsRepository) getApp(id uint) *types.App {
+	a := &types.App{}
+	err := repo.db.Table("apps").Where("id = ?", id).First(a).Error
+	if err != nil {
+		return nil
+	}
+	return a
 }
 
 func (repo *appsRepository) updateApp(app *types.App) error {

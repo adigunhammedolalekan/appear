@@ -37,9 +37,9 @@ func main() {
 }
 
 type Server struct {
-	Router *gin.Engine
+	Router    *gin.Engine
 	configDir string
-	config *config.Configuration
+	config    *config.Configuration
 }
 
 func NewServer(configDir string) *Server {

@@ -12,7 +12,7 @@ import (
 const tokenKey = "auth_token_key"
 
 type AuthMiddleWare struct {
-	repo repos.UserRepository
+	repo          repos.UserRepository
 	masterAuthKey string
 }
 
@@ -45,7 +45,7 @@ func (mw *AuthMiddleWare) JwtVerifyHandler(ctx *gin.Context) {
 }
 
 func (mw *AuthMiddleWare) MasterAuthorizationMiddleware(ctx *gin.Context) {
-	token := ctx.GetHeader("Authorization")
+	token := ctx.GetHeader("X-Master-Authorization")
 	if token != mw.masterAuthKey {
 		ctx.AbortWithStatusJSON(http.StatusUnauthorized, &Response{Error: true, Message: "authorized"})
 		return

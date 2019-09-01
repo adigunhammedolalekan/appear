@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 )
 
 // var repoBuildPath = "/Users/user/mnt/docker"
@@ -101,9 +100,13 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		handler.writeTcpMessage(tcpPayload)
 		ctx.JSON(http.StatusOK, &Response{Error: true})
 		return
+	}else {
+		tcpPayload.Message = "config parse!"
+		handler.writeTcpMessage(tcpPayload)
 	}
 	type buildMessage struct {
 		Stream string `json:"stream"`
+		Status string `json:"status"`
 	}
 	for m := range result.Log {
 		s := &buildMessage{}
@@ -111,7 +114,11 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 			log.Println("json error: ", err)
 			s.Stream = m
 		}
-		tcpPayload.Message = s.Stream
+		message := s.Stream
+		if message == "" {
+			message = s.Status
+		}
+		tcpPayload.Message = message
 		handler.writeTcpMessage(tcpPayload)
 	}
 
@@ -187,17 +194,17 @@ func (handler *AppsHandler) readConfigFromRepo(appName, path string) (*docker.Co
 	if err := json.Unmarshal(data, cfg); err != nil {
 		return defaultConfig, errors.New("failed to read paas_config.json. malformed json data")
 	}
+	if cfg.Name == "" {
+		cfg.Name = appName
+	}
 	return cfg, nil
 }
 
 func (handler *AppsHandler) validUtf8String(s string) string {
-	validUtf8 := func(r rune) rune {
-		if r == utf8.RuneError {
-			return -1
-		}
-		return r
-	}
-	return strings.Map(validUtf8, s)
+	input := strings.ReplaceAll(s, "\u003e", "")
+	newString := strings.ReplaceAll(input, "\n", "")
+	log.Println(newString)
+	return newString
 }
 
 type Response struct {

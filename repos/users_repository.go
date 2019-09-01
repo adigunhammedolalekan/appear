@@ -48,7 +48,7 @@ func (repo *userRepository) CreateUserAccount(opt *types.CreateAccountOpts) (*ty
 	}
 
 	user.Token = repo.GenerateToken(user)
-	return user, nil
+	return repo.GetUser(user.Email), nil
 }
 
 func (repo *userRepository) AuthenticateUser(opt *types.AuthenticateAccountOpts) (*types.User, error) {
