@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/adigunhammedolalekan/paas/config"
 	"github.com/adigunhammedolalekan/paas/docker"
@@ -28,11 +29,36 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to load env variables")
 	}
+	args := os.Args
+	if len(args) > 1 {
+		arg := args[1]
+		if arg == "init" {
+			if err := config.InitDefaultConfig(); err != nil {
+				log.Fatal("Failed to init: ", err)
+			}else {
+				log.Println("initialization successful")
+				os.Exit(0)
+			}
+		}
+	}
 
-	sv := NewServer("./appear_config.json")
+	var configFilePath string
+	flag.StringVar(&configFilePath, "config", "", "appear configuration file path")
+	flag.Parse()
+	if configFilePath == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			// do what?
+			wd = ""
+		}
+		path := filepath.Join(wd, "appear_config.json")
+		log.Printf("Configuration file path is missing. Defaulting to %s", path)
+		configFilePath = path
+	}
+	sv := NewServer(configFilePath)
 	addr := fmt.Sprintf(":%s", os.Getenv("PORT"))
 	if err := sv.Run(addr); err != nil {
-		log.Fatal("HTTP server error ", err)
+		log.Fatal("Failed to start appear server: ", err)
 	}
 }
 
@@ -44,6 +70,7 @@ type Server struct {
 
 func NewServer(configDir string) *Server {
 	s := &Server{}
+	gin.SetMode(gin.ReleaseMode)
 	s.Router = gin.Default()
 	s.configDir = configDir
 	return s
@@ -111,6 +138,7 @@ func (s *Server) Run(addr string) error {
 			log.Fatal("failed to start git server ", err)
 		}
 	}()
+	log.Printf("appear server serving on %s", addr)
 	if err := router.Run(addr); err != nil {
 		return err
 	}

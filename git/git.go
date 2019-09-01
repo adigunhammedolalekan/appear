@@ -17,7 +17,7 @@ import (
 )
 
 // const gitStoragePath = "/Users/user/mnt/repos"
-const postReceiveHookPath = "./hooks_executor.go"
+const postReceiveHookPath = "./hooks_executor._go"
 
 type GitService struct {
 	Server         *gitkit.Server

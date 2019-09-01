@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="ad6f0694-a10c-4580-8825-a0c65c55865f" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/appear_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/appear_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/git/git.go" beforeDir="false" afterPath="$PROJECT_DIR$/git/git.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/hooks_executor.go" beforeDir="false" afterPath="$PROJECT_DIR$/hooks_executor._go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/k8s/k8s_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/k8s_service.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paas" beforeDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
+  </component>
+  <component name="GOROOT" path="/usr/local/Cellar/go/1.12.7/libexec" />
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GoDepProject">
+    <integration-enabled>true</integration-enabled>
+    <exec-path>/usr/local/bin/dep</exec-path>
+  </component>
+  <component name="GoLibraries">
+    <option name="indexEntireGoPath" value="false" />
+  </component>
+  <component name="ProjectId" id="1PevalsP7KQryXaptQt6BOpAn9G" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="PropertiesComponent">
+    <property name="DefaultGoTemplateProperty" value="Go File" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="go.gopath.indexing.explicitly.defined" value="true" />
+    <property name="go.import.settings.migrated" value="true" />
+    <property name="go.sdk.automatically.set" value="true" />
+    <property name="go.tried.to.enable.integration.dep.integrator" value="true" />
+    <property name="go.vendoring.notification.had.been.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="nodejs_package_manager_path" value="npm" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/fn" />
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/server" />
+      <recent name="$PROJECT_DIR$/build" />
+      <recent name="$PROJECT_DIR$/exp/server" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/git-apache" />
+      <recent name="$PROJECT_DIR$/exp/server/build" />
+      <recent name="$PROJECT_DIR$/exp" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="RunManager" selected="Go Build.go build github.com/adigunhammedolalekan/paas">
+    <configuration name="go build github.com/adigunhammedolalekan/paas" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true">
+      <module name="paas" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <EXTENSION ID="net.ashald.envfile">
+        <option name="IS_ENABLED" value="false" />
+        <option name="IS_SUBST" value="false" />
+        <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+        <option name="IS_IGNORE_MISSING_FILES" value="false" />
+        <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+        <ENTRIES>
+          <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+        </ENTRIES>
+      </EXTENSION>
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/main.go" />
+      <package value="github.com/adigunhammedolalekan/paas" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="paas" />
+      <working_directory value="$PROJECT_DIR$/build" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="github.com/adigunhammedolalekan/paas/build" />
+      <directory value="$PROJECT_DIR$/" />
+      <filePath value="$PROJECT_DIR$/" />
+      <pattern value="^TestDockerService_PushImage$" />
+      <method v="2" />
+    </configuration>
+    <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="paas" />
+      <working_directory value="$PROJECT_DIR$/server" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="github.com/adigunhammedolalekan/paas/server" />
+      <directory value="$PROJECT_DIR$/" />
+      <filePath value="$PROJECT_DIR$/" />
+      <pattern value="^TestMap$" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Go Build.go build github.com/adigunhammedolalekan/paas" />
+      <item itemvalue="Go Test.TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" />
+      <item itemvalue="Go Test.TestMap in github.com/adigunhammedolalekan/paas/server" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Build.go build github.com/adigunhammedolalekan/paas" />
+        <item itemvalue="Go Test.TestMap in github.com/adigunhammedolalekan/paas/server" />
+        <item itemvalue="Go Test.TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="TestHistory">
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 39m 25s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 41s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 49s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 57s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 18s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 26s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 35s.xml">
+      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.03 at 20h 06m 24s.xml">
+      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.04 at 07h 55m 45s.xml">
+      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.04 at 08h 05m 58s.xml">
+      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.conf" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

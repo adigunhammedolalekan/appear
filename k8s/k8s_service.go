@@ -381,6 +381,8 @@ func (service *PaasK8sService) GetIngress(name string) (*extensions.Ingress, err
 	if err != nil {
 		return nil, err
 	}
+	lbs := ingress.Status.LoadBalancer.Ingress[0]
+	log.Println(lbs)
 	return ingress, nil
 }
 
