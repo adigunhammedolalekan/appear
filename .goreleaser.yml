@@ -31,6 +31,6 @@ project_name: appear
 release:
   github:
     owner: adigunhammedolalekan
-    name: paas
+    name: appear
   draft: false
   name_template: '{{.Tag}}'
