@@ -9,6 +9,7 @@ before:
 builds:
 - env:
   - CGO_ENABLED=0
+  - GITHUB_TOKEN=03038bf4f65ed6400c2a0f4e4004f40bafa1e3f5
 archives:
 - replacements:
     darwin: Darwin
