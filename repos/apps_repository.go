@@ -36,7 +36,7 @@ func NewAppRepository(
 	db *gorm.DB,
 	service *git.GitService,
 	k8s k8s.K8sService) AppsRepository {
-	return &appsRepository{
+	return &appsRepository {
 		db:         db,
 		gitService: service,
 		k8s:        k8s,

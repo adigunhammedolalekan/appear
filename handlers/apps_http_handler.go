@@ -18,8 +18,6 @@ import (
 	"strings"
 )
 
-// var repoBuildPath = "/Users/user/mnt/docker"
-
 type AppsHandler struct {
 	tcp           *server.TcpServer
 	appRepo       repos.AppsRepository

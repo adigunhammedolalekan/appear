@@ -36,15 +36,20 @@ type Config struct {
 }
 
 func CreateBuildFromConfig(cfg *Config) Build {
-	log.Println(cfg)
-	switch cfg.Language {
-	case "Go":
-		return GolangBuild{}
-	}
-	return nodeJsBuildFromConfig(cfg)
+	return newBuildFromConfig(cfg)
 }
 
-type GolangBuild struct {
+func newBuildFromConfig(cfg *Config) Build {
+	return BuildImpl{
+		dep:     "",
+		envs:    cfg.Envs,
+		exec:    "",
+		name:    cfg.Name,
+		baseDir: "",
+	}
+}
+
+type BuildImpl struct {
 	dep     string
 	envs    []EnvVar
 	exec    string
@@ -52,19 +57,19 @@ type GolangBuild struct {
 	baseDir string
 }
 
-func (g GolangBuild) Stack() string {
+func (g BuildImpl) Stack() string {
 	return "Go"
 }
 
-func (g GolangBuild) Deps() string {
+func (g BuildImpl) Deps() string {
 	return g.dep
 }
 
-func (g GolangBuild) BaseImage() string {
+func (g BuildImpl) BaseImage() string {
 	return "golang:alpine"
 }
 
-func (g GolangBuild) EnvVars() []EnvVar {
+func (g BuildImpl) EnvVars() []EnvVar {
 	vars := make([]EnvVar, 0)
 	for k := range g.envs {
 		e := g.envs[k]
@@ -74,19 +79,19 @@ func (g GolangBuild) EnvVars() []EnvVar {
 	return vars
 }
 
-func (g GolangBuild) Port() int64 {
+func (g BuildImpl) Port() int64 {
 	return 80
 }
 
-func (g GolangBuild) ExecCommand() string {
+func (g BuildImpl) ExecCommand() string {
 	return g.exec
 }
 
-func (g GolangBuild) Name() string {
+func (g BuildImpl) Name() string {
 	return g.name
 }
 
-func (g GolangBuild) BaseDir() string {
+func (g BuildImpl) BaseDir() string {
 	return g.baseDir
 }
 
