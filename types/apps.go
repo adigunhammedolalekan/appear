@@ -8,11 +8,6 @@ import (
 	"strings"
 )
 
-type Database interface {
-	Name() string
-	Type() string
-}
-
 type User struct {
 	gorm.Model
 	Email    string `json:"email"`

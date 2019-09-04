@@ -6,8 +6,14 @@ services:
     image: registry:2
     ports:
       - 5000:5000
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry
+      REGISTRY_AUTH_HTPASSWD_PATH: /mnt/registry/auth/registry.password
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /mnt/registry/data
     volumes:
-      - /Users/user/mnt/registry/data:/var/lib/registry
+      - /Users/user/mnt/registry/data:/mnt/registry/data
+      - /Users/user/mnt/registry/auth/registry.password:/mnt/registry/auth/registry.password
   pgdatabase:
     image: postgres:10.4
     container_name: pgdatabase

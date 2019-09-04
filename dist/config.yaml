@@ -2,7 +2,7 @@ project_name: appear
 release:
   github:
     owner: adigunhammedolalekan
-    name: paas
+    name: appear
   name_template: '{{.Tag}}'
 brews:
 - name: appear

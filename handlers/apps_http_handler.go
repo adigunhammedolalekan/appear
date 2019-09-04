@@ -91,7 +91,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 	}
 
 	user := commit.Author.Email
-	handler.writeTcpMessage(tcpPayload)
+	// handler.writeTcpMessage(tcpPayload)
 	result, err := handler.dockerService.BuildLocalImage(clonePath, docker.CreateBuildFromConfig(config))
 	if err != nil {
 		tcpPayload.Message = "failed to build docker image: " + err.Error()
@@ -99,7 +99,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, &Response{Error: true})
 		return
 	} else {
-		tcpPayload.Message = "config parse!"
+		tcpPayload.Message = "configuration file detected"
 		handler.writeTcpMessage(tcpPayload)
 	}
 	type buildMessage struct {
@@ -112,9 +112,9 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 			log.Println("json error: ", err)
 			s.Stream = m
 		}
-		message := s.Stream
+		message := s.Status
 		if message == "" {
-			message = s.Status
+			message = s.Stream
 		}
 		tcpPayload.Message = message
 		handler.writeTcpMessage(tcpPayload)
@@ -150,7 +150,12 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 }
 
 func (handler *AppsHandler) LogsHandler(ctx *gin.Context) {
-	s, err := handler.appRepo.Logs(ctx.Query("name"))
+	name := ctx.Query("name")
+	if name == "" {
+		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: app name is missing"})
+		return
+	}
+	s, err := handler.appRepo.Logs(name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, &Response{Error: true, Message: err.Error()})
 		return

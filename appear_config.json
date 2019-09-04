@@ -5,5 +5,10 @@
   "auth" : {
     "master_authorization_key" : "$$password$$"
   },
-  "k8s_config_dir" : ""
+  "k8s_config_dir" : "",
+  "registry" : {
+    "url" : "localhost:5000/",
+    "username" : "lekan",
+    "password" : "manman"
+  }
 }

@@ -27,15 +27,15 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("failed to load env variables")
+		log.Fatal("failed to load environment variables")
 	}
 	args := os.Args
 	if len(args) > 1 {
 		arg := args[1]
 		if arg == "init" {
 			if err := config.InitDefaultConfig(); err != nil {
-				log.Fatal("Failed to init: ", err)
-			}else {
+				log.Fatal("Failed to init project config: ", err)
+			} else {
 				log.Println("initialization successful")
 				os.Exit(0)
 			}
@@ -93,12 +93,12 @@ func (s *Server) Run(addr string) error {
 	if err != nil {
 		return err
 	}
-	k8sService, err := k8s.NewK8sService()
+	k8sService, err := k8s.NewK8sService(s.config.Registry)
 	if err != nil {
 		return err
 	}
 
-	dockerService := docker.NewDockerService(dockerClient)
+	dockerService := docker.NewDockerService(dockerClient, s.config.Registry)
 	tcp := server.NewTcpServer(os.Getenv("TCP_SERVER_ADDR"))
 	appRepo := repos.NewAppRepository(db, service, k8sService)
 	accountRepo := repos.NewUserRepository(db)
@@ -132,8 +132,8 @@ func (s *Server) Run(addr string) error {
 	// run git-http server
 	http.Handle("/", service.Server)
 	go func() {
-		log.Println("git server accepting http request on :9798")
 		gitServerAddr := fmt.Sprintf(":%s", os.Getenv("GIT_SERVER_ADDR"))
+		log.Println("git server accepting http request on", gitServerAddr)
 		if err := http.ListenAndServe(gitServerAddr, nil); err != nil {
 			log.Fatal("failed to start git server ", err)
 		}
