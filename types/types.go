@@ -36,6 +36,11 @@ type ProvisionDatabaseOpts struct {
 	DataMountPath string
 }
 
+type ProvisionDatabaseRequest struct {
+	UserId uint `json:"user_id"`
+	DatabaseType string `json:"database_type"`
+	DatabaseName string `json:"database_name"`
+}
 
 type DatabaseProvisionResult struct {
 	Credential *DatabaseCredential
@@ -46,6 +51,7 @@ type DatabaseCredential struct {
 	Password string `json:"password"`
 	DatabaseName string `json:"database_name"`
 	DbType string `json:"db_type"`
+	DatabaseHost string `json:"database_host"`
 }
 
 func DatabaseCredentialAsUri(dbType string, credential *DatabaseCredential) string {

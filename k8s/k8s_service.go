@@ -34,6 +34,7 @@ type K8sService interface {
 	Logs(appName string) (string, error)
 	ScaleApp(deploymentName string, replica int32) error
 	GetPodNode(podName string) (*v1.Node, error)
+	ProvisionDatabase(opt *types.ProvisionDatabaseOpts) (*types.DatabaseProvisionResult, error)
 }
 
 type PaasK8sService struct {
@@ -385,13 +386,17 @@ func (service *PaasK8sService) createDatabaseLbService(name string, port int32) 
 }
 
 func (service *PaasK8sService) createPersistentVolume(name string, size int64) error {
+	q, err := resource.ParseQuantity(fmt.Sprintf("%dGi", size))
+	if err != nil {
+		return err
+	}
 	labels := map[string]string{"type" : fmt.Sprintf("%s-local", name)}
 	pv := &v1.PersistentVolume{}
 	pv.Name = fmt.Sprintf("%s-pv", name)
 	pv.Labels = labels
 	spec := v1.PersistentVolumeSpec{
 		Capacity: map[v1.ResourceName]resource.Quantity{
-			v1.ResourceStorage: *resource.NewQuantity(size, resource.BinarySI),
+			v1.ResourceStorage: q,
 		},
 		AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: "manual",
@@ -407,6 +412,10 @@ func (service *PaasK8sService) createPersistentVolume(name string, size int64) e
 }
 
 func (service *PaasK8sService) createPersistentVolumeClaim(name string, size int64) error {
+	q, err := resource.ParseQuantity(fmt.Sprintf("%dGi", size))
+	if err != nil {
+		return err
+	}
 	pvc := &v1.PersistentVolumeClaim{}
 	pvc.Name = fmt.Sprintf("%s-pvc", name)
 	spec := v1.PersistentVolumeClaimSpec{
@@ -414,7 +423,7 @@ func (service *PaasK8sService) createPersistentVolumeClaim(name string, size int
 		AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		Resources: v1.ResourceRequirements{
 			Requests: map[v1.ResourceName]resource.Quantity{
-				v1.ResourceStorage: *resource.NewQuantity(size, resource.BinarySI),
+				v1.ResourceStorage: q,
 			},
 		},
 	}
@@ -434,7 +443,8 @@ func (service *PaasK8sService) createDatabaseDeployment(opt *types.ProvisionData
 	envs = append(envs, v1.EnvVar{
 		Name: opt.PasswordKey,
 		ValueFrom: &v1.EnvVarSource{
-			SecretKeyRef: &v1.SecretKeySelector{Key: secName},
+			SecretKeyRef: &v1.SecretKeySelector{Key: secName, LocalObjectReference:
+				v1.LocalObjectReference{Name: secName}},
 		},
 	})
 	// prepare environment variables
@@ -452,7 +462,7 @@ func (service *PaasK8sService) createDatabaseDeployment(opt *types.ProvisionData
 	spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
-	volumeMountName := fmt.Sprintf("%s-volume-mount")
+	volumeMountName := fmt.Sprintf("%s-volume-mount", opt.Name)
 	template := v1.PodTemplateSpec{}
 	template.Labels = labels
 	container := v1.Container{

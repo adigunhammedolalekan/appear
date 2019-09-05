@@ -163,6 +163,21 @@ func (handler *AppsHandler) LogsHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, &Response{Error: false, Message: s})
 }
 
+func (handler *AppsHandler) ProvisionDbHandler(ctx *gin.Context) {
+	opt := &types.ProvisionDatabaseRequest{}
+	if err := ctx.ShouldBindJSON(opt); err != nil {
+		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: malformed json body"})
+		return
+	}
+	result, err := handler.appRepo.ProvisionDatabase(opt)
+	if err != nil {
+		log.Println("failed to provision database: ", err)
+		ctx.JSON(http.StatusInternalServerError, &Response{Error: true, Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, &Response{Error: false, Message: "success", Data: result})
+}
+
 func (handler *AppsHandler) resolveRepoUrl(s string) string {
 	log.Println("resolving repo path ", s)
 	parts := strings.Split(s, "/")

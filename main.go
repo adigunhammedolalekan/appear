@@ -112,6 +112,7 @@ func (s *Server) Run(addr string) error {
 	mw := handlers.NewAuthMiddleware(accountRepo, authKey)
 	accountApiGroup := router.Group("/api/account")
 	appGroup := router.Group("/api/app")
+	dbGroup := router.Group("/api/db")
 
 	appGroup.Use(mw.JwtVerifyHandler)
 	accountApiGroup.Use(mw.MasterAuthorizationMiddleware)
@@ -120,6 +121,7 @@ func (s *Server) Run(addr string) error {
 	appGroup.GET("/logs", appHandler.LogsHandler)
 	appGroup.POST("/new", appHandler.CreateAppHandler)
 	accountApiGroup.POST("/new", accountHandler.CreateNewUserHandler)
+	dbGroup.POST("/new", appHandler.ProvisionDbHandler)
 	accountApiGroup.POST("/authenticate", accountHandler.AuthenticateAccount)
 
 	// run tcp server
