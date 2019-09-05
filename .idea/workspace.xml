@@ -2,12 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ad6f0694-a10c-4580-8825-a0c65c55865f" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/handlers/apps_http_handler.go" beforeDir="false" afterPath="$PROJECT_DIR$/handlers/apps_http_handler.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/k8s_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/k8s_service.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/repos/apps_repository.go" beforeDir="false" afterPath="$PROJECT_DIR$/repos/apps_repository.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/types/types.go" beforeDir="false" afterPath="$PROJECT_DIR$/types/types.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/CHANGELOG.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_0.0.3_Darwin_i386.tar.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_0.0.3_Darwin_x86_64.tar.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_0.0.3_Linux_i386.tar.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_0.0.3_Linux_x86_64.tar.gz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_darwin_386/appear" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_darwin_amd64/appear" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_linux_386/appear" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/appear_linux_amd64/appear" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/checksums.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/config.yaml" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

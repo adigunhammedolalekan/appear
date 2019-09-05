@@ -24,20 +24,19 @@ type HookInfo struct {
 	Key      string `json:"key"`
 }
 
-
 type ProvisionDatabaseOpts struct {
-	Name string
-	Type string
-	Space int64
-	DefaultPort int32
-	BaseImage string
-	Envs map[string]string
+	Name                                      string
+	Type                                      string
+	Space                                     int64
+	DefaultPort                               int32
+	BaseImage                                 string
+	Envs                                      map[string]string
 	PasswordKey, UsernameKey, DatabaseNameKey string
-	DataMountPath string
+	DataMountPath                             string
 }
 
 type ProvisionDatabaseRequest struct {
-	UserId uint `json:"user_id"`
+	UserId       uint   `json:"user_id"`
 	DatabaseType string `json:"database_type"`
 	DatabaseName string `json:"database_name"`
 }
@@ -47,10 +46,10 @@ type DatabaseProvisionResult struct {
 }
 
 type DatabaseCredential struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
 	DatabaseName string `json:"database_name"`
-	DbType string `json:"db_type"`
+	DbType       string `json:"db_type"`
 	DatabaseHost string `json:"database_host"`
 }
 

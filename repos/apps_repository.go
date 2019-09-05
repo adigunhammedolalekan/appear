@@ -141,10 +141,10 @@ func (repo *appsRepository) createPostgresDbOpts(appName string) *types.Provisio
 	opt.Type = "postgres"
 	opt.UsernameKey = "POSTGRES_USER"
 	opt.Envs = map[string]string{
-		"POSTGRES_PASSWORD" : fn.GenerateRandomString(60),
-		"POSTGRES_USER" : fn.GenerateRandomString(30),
-		"POSTGRES_DB" : appName,
-		"PGDATA" : opt.DataMountPath,
+		"POSTGRES_PASSWORD": fn.GenerateRandomString(60),
+		"POSTGRES_USER":     fn.GenerateRandomString(30),
+		"POSTGRES_DB":       appName,
+		"PGDATA":            opt.DataMountPath,
 	}
 	return opt
 }

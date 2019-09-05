@@ -390,7 +390,7 @@ func (service *PaasK8sService) createPersistentVolume(name string, size int64) e
 	if err != nil {
 		return err
 	}
-	labels := map[string]string{"type" : fmt.Sprintf("%s-local", name)}
+	labels := map[string]string{"type": fmt.Sprintf("%s-local", name)}
 	pv := &v1.PersistentVolume{}
 	pv.Name = fmt.Sprintf("%s-pv", name)
 	pv.Labels = labels
@@ -398,7 +398,7 @@ func (service *PaasK8sService) createPersistentVolume(name string, size int64) e
 		Capacity: map[v1.ResourceName]resource.Quantity{
 			v1.ResourceStorage: q,
 		},
-		AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		StorageClassName: "manual",
 	}
 	spec.PersistentVolumeSource = v1.PersistentVolumeSource{
@@ -420,7 +420,7 @@ func (service *PaasK8sService) createPersistentVolumeClaim(name string, size int
 	pvc.Name = fmt.Sprintf("%s-pvc", name)
 	spec := v1.PersistentVolumeClaimSpec{
 		StorageClassName: String("manual"),
-		AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 		Resources: v1.ResourceRequirements{
 			Requests: map[v1.ResourceName]resource.Quantity{
 				v1.ResourceStorage: q,
@@ -443,8 +443,7 @@ func (service *PaasK8sService) createDatabaseDeployment(opt *types.ProvisionData
 	envs = append(envs, v1.EnvVar{
 		Name: opt.PasswordKey,
 		ValueFrom: &v1.EnvVarSource{
-			SecretKeyRef: &v1.SecretKeySelector{Key: secName, LocalObjectReference:
-				v1.LocalObjectReference{Name: secName}},
+			SecretKeyRef: &v1.SecretKeySelector{Key: secName, LocalObjectReference: v1.LocalObjectReference{Name: secName}},
 		},
 	})
 	// prepare environment variables
@@ -466,12 +465,12 @@ func (service *PaasK8sService) createDatabaseDeployment(opt *types.ProvisionData
 	template := v1.PodTemplateSpec{}
 	template.Labels = labels
 	container := v1.Container{
-		Name: fmt.Sprintf("%s-container", name),
+		Name:  fmt.Sprintf("%s-container", name),
 		Image: opt.BaseImage,
 		Ports: []v1.ContainerPort{
 			{Name: "connect-port", Protocol: "TCP", ContainerPort: opt.DefaultPort},
 		},
-		Env: envs,
+		Env:          envs,
 		VolumeMounts: []v1.VolumeMount{{Name: volumeMountName, MountPath: opt.DataMountPath}},
 	}
 	template.Spec.Containers = []v1.Container{container}
@@ -516,8 +515,8 @@ func (service *PaasK8sService) ProvisionDatabase(opt *types.ProvisionDatabaseOpt
 	}
 	return &types.DatabaseProvisionResult{
 		Credential: &types.DatabaseCredential{
-			Username: opt.Envs[opt.UsernameKey],
-			Password: opt.Envs[opt.PasswordKey],
+			Username:     opt.Envs[opt.UsernameKey],
+			Password:     opt.Envs[opt.PasswordKey],
 			DatabaseName: opt.Envs[opt.DatabaseNameKey],
 		},
 	}, nil
