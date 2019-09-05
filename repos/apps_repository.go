@@ -2,6 +2,7 @@ package repos
 
 import (
 	"fmt"
+	"github.com/adigunhammedolalekan/paas/fn"
 	"github.com/adigunhammedolalekan/paas/git"
 	"github.com/adigunhammedolalekan/paas/k8s"
 	"github.com/adigunhammedolalekan/paas/types"
@@ -11,8 +12,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
+
+const dbTypePostgres = "postgres"
 
 type AppsRepository interface {
 	CreateApp(opt *types.CreateAppOpts) (*types.App, error)
@@ -23,6 +27,7 @@ type AppsRepository interface {
 	GetAppByRepositoryUrl(repoUrl string) (*types.App, error)
 	UpdateDeployment(app *types.App) error
 	Logs(name string) (string, error)
+	ProvisionDatabase(req *types.ProvisionDatabaseRequest) (*types.DatabaseProvisionResult, error)
 }
 
 type appsRepository struct {
@@ -110,6 +115,38 @@ func (repo appsRepository) CreateApp(opt *types.CreateAppOpts) (*types.App, erro
 		log.Println("failed to update app ", err)
 	}
 	return repo.getApp(app.ID), nil
+}
+
+func (repo *appsRepository) ProvisionDatabase(req *types.ProvisionDatabaseRequest) (*types.DatabaseProvisionResult, error) {
+	if req.DatabaseName == "" {
+		req.DatabaseName = repo.randomAppName()
+	}
+	req.DatabaseName = strings.ReplaceAll(req.DatabaseName, "-", "")
+	var opt *types.ProvisionDatabaseOpts
+	if req.DatabaseType == dbTypePostgres {
+		opt = repo.createPostgresDbOpts(req.DatabaseName)
+	}
+	return repo.k8s.ProvisionDatabase(opt)
+}
+
+func (repo *appsRepository) createPostgresDbOpts(appName string) *types.ProvisionDatabaseOpts {
+	opt := &types.ProvisionDatabaseOpts{}
+	opt.BaseImage = "postgres:10.4"
+	opt.DatabaseNameKey = "POSTGRES_DB"
+	opt.DefaultPort = 5432
+	opt.Space = 1 // 1GiG
+	opt.PasswordKey = "POSTGRES_PASSWORD"
+	opt.DataMountPath = fmt.Sprintf("/mnt/%s/postgres", appName)
+	opt.Name = appName
+	opt.Type = "postgres"
+	opt.UsernameKey = "POSTGRES_USER"
+	opt.Envs = map[string]string{
+		"POSTGRES_PASSWORD": fn.GenerateRandomString(60),
+		"POSTGRES_USER":     fn.GenerateRandomString(30),
+		"POSTGRES_DB":       appName,
+		"PGDATA":            opt.DataMountPath,
+	}
+	return opt
 }
 
 func (repo *appsRepository) ListApps(id uint) ([]*types.App, error) {

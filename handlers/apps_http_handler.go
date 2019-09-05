@@ -18,8 +18,6 @@ import (
 	"strings"
 )
 
-// var repoBuildPath = "/Users/user/mnt/docker"
-
 type AppsHandler struct {
 	tcp           *server.TcpServer
 	appRepo       repos.AppsRepository
@@ -93,7 +91,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 	}
 
 	user := commit.Author.Email
-	handler.writeTcpMessage(tcpPayload)
+	// handler.writeTcpMessage(tcpPayload)
 	result, err := handler.dockerService.BuildLocalImage(clonePath, docker.CreateBuildFromConfig(config))
 	if err != nil {
 		tcpPayload.Message = "failed to build docker image: " + err.Error()
@@ -101,7 +99,7 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, &Response{Error: true})
 		return
 	} else {
-		tcpPayload.Message = "config parse!"
+		tcpPayload.Message = "configuration file detected"
 		handler.writeTcpMessage(tcpPayload)
 	}
 	type buildMessage struct {
@@ -114,9 +112,9 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 			log.Println("json error: ", err)
 			s.Stream = m
 		}
-		message := s.Stream
+		message := s.Status
 		if message == "" {
-			message = s.Status
+			message = s.Stream
 		}
 		tcpPayload.Message = message
 		handler.writeTcpMessage(tcpPayload)
@@ -152,12 +150,32 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 }
 
 func (handler *AppsHandler) LogsHandler(ctx *gin.Context) {
-	s, err := handler.appRepo.Logs(ctx.Query("name"))
+	name := ctx.Query("name")
+	if name == "" {
+		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: app name is missing"})
+		return
+	}
+	s, err := handler.appRepo.Logs(name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, &Response{Error: true, Message: err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, &Response{Error: false, Message: s})
+}
+
+func (handler *AppsHandler) ProvisionDbHandler(ctx *gin.Context) {
+	opt := &types.ProvisionDatabaseRequest{}
+	if err := ctx.ShouldBindJSON(opt); err != nil {
+		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: malformed json body"})
+		return
+	}
+	result, err := handler.appRepo.ProvisionDatabase(opt)
+	if err != nil {
+		log.Println("failed to provision database: ", err)
+		ctx.JSON(http.StatusInternalServerError, &Response{Error: true, Message: err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, &Response{Error: false, Message: "success", Data: result})
 }
 
 func (handler *AppsHandler) resolveRepoUrl(s string) string {

@@ -1,1 +1,14 @@
-{"database_url":"","git_storage_path":"/mnt/repos","docker_build_path":"/mnt/build","auth":{"master_authorization_key":"3kgqIbh9SpgoOgJ4eVla21GhX6CGN0UWAmyZMBbaB8o="},"k8s_config_dir":"","host":""}
+{
+  "database_url" : "postgres://postgres:man@localhost:5432/appear?sslmode=disable",
+  "git_storage_path" : "/Users/user/mnt/repos",
+  "docker_build_path" : "/Users/user/mnt/build",
+  "auth" : {
+    "master_authorization_key" : "$$password$$"
+  },
+  "k8s_config_dir" : "",
+  "registry" : {
+    "url" : "localhost:5000/",
+    "username" : "lekan",
+    "password" : "manman"
+  }
+}

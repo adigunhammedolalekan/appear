@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/adigunhammedolalekan/paas/config"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
@@ -21,6 +24,7 @@ const goBuildCommand = "RUN CGO_ENABLED=0 GOOS=linux go docker -o %s -a -install
 type DockerService struct {
 	client            *client.Client
 	dockerFileBuilder bytes.Buffer
+	registry          *config.Registry
 }
 type BuildResult struct {
 	Tag      string
@@ -28,8 +32,8 @@ type BuildResult struct {
 	Log      chan string
 }
 
-func NewDockerService(client *client.Client) *DockerService {
-	return &DockerService{client: client}
+func NewDockerService(client *client.Client, registry *config.Registry) *DockerService {
+	return &DockerService{client: client, registry: registry}
 }
 
 func (p *DockerService) PullImage(name string) error {
@@ -58,7 +62,7 @@ func (p *DockerService) PullImage(name string) error {
 func (p *DockerService) PushImage(name string) (chan string, error) {
 	ctx := context.Background()
 	log.Println("Pushing to ", name)
-	reader, err := p.client.ImagePush(ctx, name, types.ImagePushOptions{RegistryAuth: "$$password$$"})
+	reader, err := p.client.ImagePush(ctx, name, types.ImagePushOptions{RegistryAuth: p.registryAuthAsBase64()})
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +111,7 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*BuildResult,
 	}
 
 	tag := p.md5()[:6]
-	pullPath := fmt.Sprintf("%s%s:%s", "localhost:5000/", build.Name(), tag)
-	log.Println("PullPath ", pullPath)
+	pullPath := fmt.Sprintf("%s%s:%s", p.registry.RegistryUrl, build.Name(), tag)
 	ctx := context.Background()
 	reader, err := p.client.ImageBuild(ctx, buildCtx, types.ImageBuildOptions{
 		Dockerfile: "Dockerfile", PullParent: true, Tags: []string{pullPath}, NoCache: false,
@@ -139,6 +142,9 @@ func (p *DockerService) BuildLocalImage(path string, build Build) (*BuildResult,
 	return res, nil
 }
 
+// buildDockerfile check for present of Dockerfile in the given path.
+// In future, this function will use Build{} interface to create a suitable
+// Dockerfile for the app being deployed.
 func (p *DockerService) buildDockerfile(path string, build Build) error {
 	// check for Dockerfile presence and just return
 	// to caller if we already have a Dockerfile
@@ -225,4 +231,16 @@ func (p *DockerService) md5() string {
 	m5 := md5.New()
 	m5.Write([]byte(uuid.New().String()))
 	return fmt.Sprintf("%+x", string(m5.Sum(nil)))
+}
+
+func (p *DockerService) registryAuthAsBase64() string {
+	authConfig := types.AuthConfig{
+		Username: p.registry.Username,
+		Password: p.registry.Password,
+	}
+	encoded, err := json.Marshal(authConfig)
+	if err != nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(encoded)
 }

@@ -2,14 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ad6f0694-a10c-4580-8825-a0c65c55865f" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/appear_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/appear_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/git/git.go" beforeDir="false" afterPath="$PROJECT_DIR$/git/git.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/hooks_executor.go" beforeDir="false" afterPath="$PROJECT_DIR$/hooks_executor._go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/k8s/k8s_service.go" beforeDir="false" afterPath="$PROJECT_DIR$/k8s/k8s_service.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/paas" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -77,9 +70,19 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Go Build.go build github.com/adigunhammedolalekan/paas">
+  <component name="RunManager" selected="Go Test.go test github.com/adigunhammedolalekan/paas/types">
+    <configuration default="true" type="GoApplicationRunConfiguration" factoryName="Go Application">
+      <module name="appear" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <go_parameters value="-i" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/" />
+      <package value="github.com/adigunhammedolalekan/paas" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
     <configuration name="go build github.com/adigunhammedolalekan/paas" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true">
-      <module name="paas" />
+      <module name="appear" />
       <working_directory value="$PROJECT_DIR$/" />
       <EXTENSION ID="net.ashald.envfile">
         <option name="IS_ENABLED" value="false" />
@@ -98,7 +101,7 @@
       <method v="2" />
     </configuration>
     <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="paas" />
+      <module name="appear" />
       <working_directory value="$PROJECT_DIR$/build" />
       <framework value="gotest" />
       <kind value="PACKAGE" />
@@ -109,7 +112,7 @@
       <method v="2" />
     </configuration>
     <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="paas" />
+      <module name="appear" />
       <working_directory value="$PROJECT_DIR$/server" />
       <framework value="gotest" />
       <kind value="PACKAGE" />
@@ -119,50 +122,41 @@
       <pattern value="^TestMap$" />
       <method v="2" />
     </configuration>
+    <configuration default="true" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="appear" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <go_parameters value="-i" />
+      <framework value="gotest" />
+      <kind value="DIRECTORY" />
+      <package value="github.com/adigunhammedolalekan/paas" />
+      <directory value="$PROJECT_DIR$/" />
+      <filePath value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go test github.com/adigunhammedolalekan/paas/types" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+      <module name="appear" />
+      <working_directory value="$PROJECT_DIR$/types" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="github.com/adigunhammedolalekan/paas/types" />
+      <directory value="$PROJECT_DIR$/" />
+      <filePath value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Go Build.go build github.com/adigunhammedolalekan/paas" />
       <item itemvalue="Go Test.TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" />
       <item itemvalue="Go Test.TestMap in github.com/adigunhammedolalekan/paas/server" />
+      <item itemvalue="Go Test.go test github.com/adigunhammedolalekan/paas/types" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Go Test.go test github.com/adigunhammedolalekan/paas/types" />
         <item itemvalue="Go Build.go build github.com/adigunhammedolalekan/paas" />
         <item itemvalue="Go Test.TestMap in github.com/adigunhammedolalekan/paas/server" />
         <item itemvalue="Go Test.TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" />
       </list>
     </recent_temporary>
-  </component>
-  <component name="TestHistory">
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 39m 25s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 41s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 49s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 43m 57s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 18s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 26s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestDockerService_PushImage_in_github_com_adigunhammedolalekan_paas_build - 2019.07.30 at 17h 44m 35s.xml">
-      <configuration name="TestDockerService_PushImage in github.com/adigunhammedolalekan/paas/build" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.03 at 20h 06m 24s.xml">
-      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.04 at 07h 55m 45s.xml">
-      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestMap_in_github_com_adigunhammedolalekan_paas_server - 2019.08.04 at 08h 05m 58s.xml">
-      <configuration name="TestMap in github.com/adigunhammedolalekan/paas/server" configurationId="GoTestRunConfiguration" />
-    </history-entry>
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">

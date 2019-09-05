@@ -23,3 +23,36 @@ type HookInfo struct {
 	RefName  string `json:"ref_name"`
 	Key      string `json:"key"`
 }
+
+type ProvisionDatabaseOpts struct {
+	Name                                      string
+	Type                                      string
+	Space                                     int64
+	DefaultPort                               int32
+	BaseImage                                 string
+	Envs                                      map[string]string
+	PasswordKey, UsernameKey, DatabaseNameKey string
+	DataMountPath                             string
+}
+
+type ProvisionDatabaseRequest struct {
+	UserId       uint   `json:"user_id"`
+	DatabaseType string `json:"database_type"`
+	DatabaseName string `json:"database_name"`
+}
+
+type DatabaseProvisionResult struct {
+	Credential *DatabaseCredential
+}
+
+type DatabaseCredential struct {
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	DatabaseName string `json:"database_name"`
+	DbType       string `json:"db_type"`
+	DatabaseHost string `json:"database_host"`
+}
+
+func DatabaseCredentialAsUri(dbType string, credential *DatabaseCredential) string {
+	return ""
+}

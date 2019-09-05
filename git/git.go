@@ -43,7 +43,6 @@ func (s *GitService) CreateNewRepository(appName, repoName string) error {
 	if err := os.MkdirAll(fullpath, os.ModePerm); err != nil {
 		return err
 	}
-
 	cmd := exec.Command("git", "init", "--bare")
 	cmd.Dir = fullpath
 	cmd.Stdout = os.Stdout
@@ -115,7 +114,6 @@ func (s *GitService) CloneRepository(username, clonePath, gitUrl string) (*objec
 	}
 	repo, err = git.PlainOpen(clonePath)
 	if err != nil {
-		log.Println("failed to open repo ", clonePath, err)
 		return nil, err
 	}
 	h, err := repo.Head()

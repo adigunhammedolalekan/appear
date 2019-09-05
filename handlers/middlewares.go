@@ -4,7 +4,6 @@ import (
 	"github.com/adigunhammedolalekan/paas/repos"
 	"github.com/adigunhammedolalekan/paas/types"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -39,7 +38,6 @@ func (mw *AuthMiddleWare) JwtVerifyHandler(ctx *gin.Context) {
 		return
 	}
 
-	log.Println("User verified!", user)
 	ctx.Set(tokenKey, user)
 	ctx.Next()
 }

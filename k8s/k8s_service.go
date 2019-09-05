@@ -1,13 +1,17 @@
 package k8s
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	cfg "github.com/adigunhammedolalekan/paas/config"
 	"github.com/adigunhammedolalekan/paas/docker"
 	"github.com/adigunhammedolalekan/paas/types"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
@@ -21,6 +25,7 @@ import (
 
 const nameSpace = "appear-namespace"
 const stablePort = 6003
+const secretName = "appear-registry-secret"
 
 type K8sService interface {
 	NginxDeployment(app *types.App) error
@@ -29,13 +34,15 @@ type K8sService interface {
 	Logs(appName string) (string, error)
 	ScaleApp(deploymentName string, replica int32) error
 	GetPodNode(podName string) (*v1.Node, error)
+	ProvisionDatabase(opt *types.ProvisionDatabaseOpts) (*types.DatabaseProvisionResult, error)
 }
 
 type PaasK8sService struct {
-	client *kubernetes.Clientset
+	client   *kubernetes.Clientset
+	registry *cfg.Registry
 }
 
-func NewK8sService() (K8sService, error) {
+func NewK8sService(registry *cfg.Registry) (K8sService, error) {
 	configPath := filepath.Join(os.Getenv("HOME"), ".kube", "config")
 	config, err := clientcmd.BuildConfigFromFlags("", configPath)
 	if err != nil {
@@ -45,9 +52,12 @@ func NewK8sService() (K8sService, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := &PaasK8sService{client: client}
+	service := &PaasK8sService{client: client, registry: registry}
 	if err := service.createNameSpaceIfNotExists(); err != nil {
 		return nil, err
+	}
+	if err := service.createRegistrySecret(); err != nil {
+		log.Println("WARNING: cannot create private registry secret: ", err)
 	}
 	return service, nil
 }
@@ -94,6 +104,54 @@ func (service *PaasK8sService) createK8sService(name string,
 	return nil
 }
 
+func (service *PaasK8sService) createRegistrySecret() error {
+	secret := &v1.Secret{}
+	secret.Name = secretName
+	secret.Type = v1.SecretTypeDockerConfigJson
+	data, err := service.dockerConfigJson()
+	if err != nil {
+		return err
+	}
+	secret.Data = map[string][]byte{
+		v1.DockerConfigJsonKey: data,
+	}
+	if _, err := service.client.CoreV1().Secrets(nameSpace).Create(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+// dockerConfigJson returns a json rep of user's
+// docker registry auth credentials.
+func (service *PaasK8sService) dockerConfigJson() ([]byte, error) {
+	// {"auths": {"yourprivateregistry.com":
+	// {"username":"janedoe",
+	// "password":"xxxxxxxxxxx",
+	// "email":"jdoe@example.com",
+	// "auth":"c3R...zE2"}}}
+	type authData struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
+		Auth     string `json:"auth"`
+	}
+	username, password := service.registry.Username, service.registry.Password
+	ad := authData{
+		Username: username,
+		Password: password,
+	}
+	type auths struct {
+		Auths map[string]authData `json:"auths"`
+	}
+	usernamePassword := fmt.Sprintf("%s:%s", username, password)
+	encoded := base64.StdEncoding.EncodeToString([]byte(usernamePassword))
+	ad.Auth = encoded
+	a := &auths{Auths: map[string]authData{
+		service.registry.RegistryUrl: ad,
+	}}
+	return json.Marshal(a)
+}
+
 func (service *PaasK8sService) createK8sDeployment(name, imageName string,
 	labels map[string]string,
 	envVars []docker.EnvVar, port int32) error {
@@ -124,6 +182,7 @@ func (service *PaasK8sService) createK8sDeployment(name, imageName string,
 		Containers: []v1.Container{
 			container,
 		},
+		ImagePullSecrets: []v1.LocalObjectReference{{Name: secretName}},
 	}
 	deployment.Spec = appsv1.DeploymentSpec{
 		Replicas: Int32(1),
@@ -273,7 +332,7 @@ func (service *PaasK8sService) createIngressForService(svc *v1.Service, port int
 	}
 	name := fmt.Sprintf("%s-ingress", svc.Name)
 	ingress := &extensions.Ingress{}
-	// add re-write anotations
+	// add re-write annotations
 	// so that app can be accessed from the same host
 	// kubernetes.io/ingress.class: "nginx"
 	// nginx.ingress.kubernetes.io/rewrite-target: /$1
@@ -326,33 +385,141 @@ func (service *PaasK8sService) createDatabaseLbService(name string, port int32) 
 	return nil
 }
 
-func (service *PaasK8sService) CreateDatabaseStatefulSet(name, imageName string) error {
-	serviceName := fmt.Sprintf("%s-service", name)
-	labels := map[string]string{"database": name}
-	statefullSetClient := service.client.AppsV1().StatefulSets(nameSpace)
-	template := v1.PodTemplateSpec{
-		Spec: v1.PodSpec{
-			TerminationGracePeriodSeconds: Int64(10),
-			Containers: []v1.Container{
-				{Image: imageName},
-			},
-		},
+func (service *PaasK8sService) createPersistentVolume(name string, size int64) error {
+	q, err := resource.ParseQuantity(fmt.Sprintf("%dGi", size))
+	if err != nil {
+		return err
 	}
-	statefulSet := &appsv1.StatefulSet{}
-	statefulSet.Name = fmt.Sprintf("%s-statefulset", name)
-	statefulSet.Labels = labels
-	statefulSet.Spec = appsv1.StatefulSetSpec{
-		Replicas:    Int32(1),
-		ServiceName: serviceName,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: labels,
+	labels := map[string]string{"type": fmt.Sprintf("%s-local", name)}
+	pv := &v1.PersistentVolume{}
+	pv.Name = fmt.Sprintf("%s-pv", name)
+	pv.Labels = labels
+	spec := v1.PersistentVolumeSpec{
+		Capacity: map[v1.ResourceName]resource.Quantity{
+			v1.ResourceStorage: q,
 		},
-		Template: template,
+		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		StorageClassName: "manual",
 	}
-	if _, err := statefullSetClient.Create(statefulSet); err != nil {
+	spec.PersistentVolumeSource = v1.PersistentVolumeSource{
+		HostPath: &v1.HostPathVolumeSource{Path: "/mnt/data"},
+	}
+	pv.Spec = spec
+	if _, err := service.client.CoreV1().PersistentVolumes().Create(pv); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (service *PaasK8sService) createPersistentVolumeClaim(name string, size int64) error {
+	q, err := resource.ParseQuantity(fmt.Sprintf("%dGi", size))
+	if err != nil {
+		return err
+	}
+	pvc := &v1.PersistentVolumeClaim{}
+	pvc.Name = fmt.Sprintf("%s-pvc", name)
+	spec := v1.PersistentVolumeClaimSpec{
+		StorageClassName: String("manual"),
+		AccessModes:      []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+		Resources: v1.ResourceRequirements{
+			Requests: map[v1.ResourceName]resource.Quantity{
+				v1.ResourceStorage: q,
+			},
+		},
+	}
+	pvc.Spec = spec
+	if _, err := service.client.CoreV1().PersistentVolumeClaims(nameSpace).Create(pvc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) createDatabaseDeployment(opt *types.ProvisionDatabaseOpts) error {
+	secName, secValue := fmt.Sprintf("%s-secret", opt.Name), opt.Envs[opt.PasswordKey]
+	if err := service.createSecret(secName, secValue); err != nil {
+		return err
+	}
+	envs := make([]v1.EnvVar, 0, len(opt.Envs))
+	envs = append(envs, v1.EnvVar{
+		Name: opt.PasswordKey,
+		ValueFrom: &v1.EnvVarSource{
+			SecretKeyRef: &v1.SecretKeySelector{Key: secName, LocalObjectReference: v1.LocalObjectReference{Name: secName}},
+		},
+	})
+	// prepare environment variables
+	for k, v := range opt.Envs {
+		envs = append(envs, v1.EnvVar{Name: k, Value: v})
+	}
+
+	deployment := &appsv1.Deployment{}
+	name := fmt.Sprintf("%s-database-deployment", opt.Name)
+	labels := map[string]string{"database": name}
+	spec := appsv1.DeploymentSpec{}
+	spec.Selector = &metav1.LabelSelector{
+		MatchLabels: labels,
+	}
+	spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RecreateDeploymentStrategyType,
+	}
+	volumeMountName := fmt.Sprintf("%s-volume-mount", opt.Name)
+	template := v1.PodTemplateSpec{}
+	template.Labels = labels
+	container := v1.Container{
+		Name:  fmt.Sprintf("%s-container", name),
+		Image: opt.BaseImage,
+		Ports: []v1.ContainerPort{
+			{Name: "connect-port", Protocol: "TCP", ContainerPort: opt.DefaultPort},
+		},
+		Env:          envs,
+		VolumeMounts: []v1.VolumeMount{{Name: volumeMountName, MountPath: opt.DataMountPath}},
+	}
+	template.Spec.Containers = []v1.Container{container}
+	template.Spec.Volumes = []v1.Volume{{Name: volumeMountName, VolumeSource: v1.VolumeSource{
+		PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{ClaimName: fmt.Sprintf("%s-pvc", opt.Name)},
+	}}}
+	spec.Template = template
+	deployment.Name = name
+	deployment.Labels = labels
+	deployment.Spec = spec
+	if _, err := service.client.AppsV1().Deployments(nameSpace).Create(deployment); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) createSecret(name, value string) error {
+	secret := &v1.Secret{}
+	secret.Name = name
+	secret.Type = v1.SecretTypeOpaque
+	secret.StringData = map[string]string{
+		name: base64.StdEncoding.EncodeToString([]byte(value)),
+	}
+	if _, err := service.client.CoreV1().Secrets(nameSpace).Create(secret); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *PaasK8sService) ProvisionDatabase(opt *types.ProvisionDatabaseOpts) (*types.DatabaseProvisionResult, error) {
+	if err := service.createPersistentVolume(opt.Name, opt.Space); err != nil {
+		return nil, err
+	}
+	if err := service.createPersistentVolumeClaim(opt.Name, opt.Space); err != nil {
+		return nil, err
+	}
+	if err := service.createDatabaseLbService(opt.Name, opt.DefaultPort); err != nil {
+		return nil, err
+	}
+	if err := service.createDatabaseDeployment(opt); err != nil {
+		return nil, err
+	}
+	return &types.DatabaseProvisionResult{
+		Credential: &types.DatabaseCredential{
+			Username:     opt.Envs[opt.UsernameKey],
+			Password:     opt.Envs[opt.PasswordKey],
+			DatabaseName: opt.Envs[opt.DatabaseNameKey],
+		},
+	}, nil
 }
 
 func (service *PaasK8sService) GetPodNode(podName string) (*v1.Node, error) {
