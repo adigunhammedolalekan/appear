@@ -26,10 +26,8 @@ type AppsHandler struct {
 }
 
 func NewAppsHandler(
-	tcp *server.TcpServer,
-	repo repos.AppsRepository,
-	dockerService *docker.DockerService,
-	repoBuildPath string) *AppsHandler {
+	tcp *server.TcpServer, repo repos.AppsRepository,
+	dockerService *docker.DockerService, repoBuildPath string) *AppsHandler {
 	return &AppsHandler{tcp: tcp, appRepo: repo, dockerService: dockerService, repoBuildPath: repoBuildPath}
 }
 
@@ -39,7 +37,6 @@ func (handler *AppsHandler) CreateAppHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, &Response{Error: true, Message: "token not found"})
 		return
 	}
-
 	opt := &types.CreateAppOpts{}
 	if err := ctx.ShouldBindJSON(opt); err != nil {
 		ctx.JSON(http.StatusBadRequest, &Response{Error: true, Message: "bad request: malformed JSON body"})
@@ -131,7 +128,6 @@ func (handler *AppsHandler) BuildAppHandler(ctx *gin.Context) {
 		tcpPayload.Message = r
 		handler.writeTcpMessage(tcpPayload)
 	}
-
 	app.ImageName = result.PullPath
 	if err := handler.appRepo.UpdateDeployment(app); err != nil {
 		tcpPayload.Message = "failed to update deployment: " + err.Error()

@@ -37,7 +37,7 @@ func InitDefaultConfig() error {
 		return err
 	}
 	configPath := filepath.Join(wd, "appear_config.json")
-	defaultConfig := &Configuration{
+	defaultConfig := &Configuration {
 		GitStoragePath:  "/mnt/repos",
 		DockerBuildPath: "/mnt/build",
 		Auth:            &Auth{MasterAuthKey: randomBase64String()},

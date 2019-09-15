@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -87,13 +88,29 @@ func (s *TcpServer) register(m *ConnMessage, conn net.Conn) {
 	s.conns[m.KeyString()] = conn
 }
 
-func (s *TcpServer) Write(p *Payload) error {
+func (s *TcpServer) Count() int {
 	s.mtx.Lock()
-	conn, ok := s.conns[p.KeyString()]
+	defer s.mtx.Unlock()
+
+	log.Println(s.conns)
+	return len(s.conns)
+}
+
+func (s *TcpServer) Client(key string) (net.Conn, error) {
+	s.mtx.Lock()
+	conn, ok := s.conns[key]
 	s.mtx.Unlock()
 
 	if !ok {
-		return fmt.Errorf("[TCP]: net.Conn not found for key %s", p.KeyString())
+		return nil, errors.New(fmt.Sprintf("client with key %s not found", key))
+	}
+	return conn, nil
+}
+
+func (s *TcpServer) Write(p *Payload) error {
+	conn, err := s.Client(p.KeyString())
+	if err != nil {
+		return err
 	}
 
 	n, err := conn.Write([]byte(fmt.Sprintf("%s\n", p.Message)))

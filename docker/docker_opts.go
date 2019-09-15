@@ -234,7 +234,7 @@ func (p *DockerService) md5() string {
 }
 
 func (p *DockerService) registryAuthAsBase64() string {
-	authConfig := types.AuthConfig{
+	authConfig := types.AuthConfig {
 		Username: p.registry.Username,
 		Password: p.registry.Password,
 	}

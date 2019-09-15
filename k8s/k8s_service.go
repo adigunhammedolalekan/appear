@@ -8,6 +8,7 @@ import (
 	cfg "github.com/adigunhammedolalekan/paas/config"
 	"github.com/adigunhammedolalekan/paas/docker"
 	"github.com/adigunhammedolalekan/paas/types"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/retry"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +57,7 @@ func NewK8sService(registry *cfg.Registry) (K8sService, error) {
 		return nil, err
 	}
 	if err := service.createRegistrySecret(); err != nil {
-		log.Println("WARNING: cannot create private registry secret: ", err)
+		log.Warn("WARNING: cannot create private registry secret: ", err)
 	}
 	return service, nil
 }
@@ -81,8 +81,11 @@ func (service *PaasK8sService) NginxDeployment(app *types.App) error {
 	return nil
 }
 
-func (service *PaasK8sService) createK8sService(name string,
-	labels map[string]string, servicePort, nodePort int32) error {
+func (service *PaasK8sService) createK8sService(
+	name string,
+	labels map[string]string,
+	servicePort,
+	nodePort int32) error {
 	svc := &v1.Service{}
 	svc.Name = name
 	svc.Labels = labels
@@ -152,9 +155,12 @@ func (service *PaasK8sService) dockerConfigJson() ([]byte, error) {
 	return json.Marshal(a)
 }
 
-func (service *PaasK8sService) createK8sDeployment(name, imageName string,
+func (service *PaasK8sService) createK8sDeployment(
+	name,
+	imageName string,
 	labels map[string]string,
-	envVars []docker.EnvVar, port int32) error {
+	envVars []docker.EnvVar,
+	port int32) error {
 
 	deployment := &appsv1.Deployment{}
 	deployment.Name = name
